@@ -1,0 +1,15 @@
+.fb-group { border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; }
+.fb-legend { font-weight: 600; }
+.fb-label { margin-right: 6px; }
+.fb-inline { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
+.fb-children { margin: 8px 0; padding-left: 12px; border-left: 3px solid #eee; }
+.fb-child { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.fb-condition { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fb-actions { display: flex; gap: 8px; margin-top: 8px; }
+.fb-btn { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #fafafa; cursor: pointer; }
+.fb-btn.danger { border-color: #e88; color: #a00; }
+.fb-list { display: inline-flex; gap: 6px; list-style: none; margin: 0 0 0 8px; padding: 0; }
+@media (max-width: 640px) {
+  .fb-inline { width: 100%; }
+  .fb-condition { flex-direction: column; align-items: flex-start; }
+}

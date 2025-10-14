@@ -1,0 +1,73 @@
+{
+  "name": "filter-builder-core",
+  "version": "6.0.0-leanapi-strict",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --coverage",
+    "clean": "rimraf dist",
+    "coverage": "vitest run --coverage",
+    "coverage:report": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov --coverage.reporter=html",
+    "coverage:open": "vitest run --coverage && (open coverage/index.html || xdg-open coverage/index.html || true)",
+    "mutate": "stryker run",
+    "mutate:open": "stryker run && (open reports/mutation/html/index.html || xdg-open reports/mutation/html/index.html || true)",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "shrinkwrap": "npm shrinkwrap --no-audit --no-fund",
+    "release": "npm run lint && npm run format:check && npm run test && npm run build && npm run shrinkwrap && npm version patch -m \"chore(patch): %s\" && npm publish --access public"
+  },
+  "dependencies": {
+    "typescript-eslint": "^8.46.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^9.2.0",
+    "@stryker-mutator/typescript-checker": "^9.2.0",
+    "@stryker-mutator/vitest-runner": "^9.2.0",
+    "@types/node": "^24.7.2",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "vitest": {
+    "coverage": {
+      "provider": "v8",
+      "reportsDirectory": "coverage",
+      "reporter": [
+        "text",
+        "json-summary",
+        "lcov",
+        "html"
+      ],
+      "thresholds": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      }
+    }
+  }
+}

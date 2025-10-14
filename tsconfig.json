@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/filter-builder-core" },
+    { "path": "./packages/filter-builder-react" },
+    { "path": "./apps/demo" }
+  ]
+}

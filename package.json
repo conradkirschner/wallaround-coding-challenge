@@ -1,0 +1,12 @@
+{
+  "name": "filter-builder-workspace",
+  "private": true,
+  "version": "6.0.0-leanapi-strict",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "npm run -w filter-builder-core build && npm run -w filter-builder-react build && npm run -w demo build",
+    "test": "npm run -w filter-builder-core test && npm run -w filter-builder-react test",
+    "dev": "npm run -w demo dev"
+  },
+  "engines": { "node": ">=20", "npm": ">=10" }
+}
