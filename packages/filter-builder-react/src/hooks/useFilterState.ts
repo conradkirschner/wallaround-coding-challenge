@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FilterNode } from 'filter-builder-core';
-import { isCondition, isAndGroup } from 'filter-builder-core';
+
 
 /**
  * A path describes how to reach a node from the root by walking indices inside group arrays.

@@ -1,6 +1,6 @@
 // src/schema.ts
 import type { Schema, Field, OperatorDef, OperatorMap, OperatorKey, ValueType } from './types.js';
-import { OPERATOR_CATALOG } from '@/operators';
+import { OPERATOR_CATALOG } from './operators';
 
 /**
  * Construct a concrete, dataset-specific schema. If `operatorMap` is provided,

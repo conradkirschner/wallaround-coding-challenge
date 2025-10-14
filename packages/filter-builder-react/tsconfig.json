@@ -12,6 +12,10 @@
       "ES2022",
       "DOM"
     ],
+    "paths": {
+      "filter-builder-react": ["./src/index.ts"],
+      "filter-builder-core": ["../filter-builder-core/src/index.ts"]
+    },
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,

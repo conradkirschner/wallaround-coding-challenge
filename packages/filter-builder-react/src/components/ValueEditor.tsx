@@ -2,12 +2,6 @@ import * as React from 'react';
 import type { Schema, Field, OperatorDef, FilterNode } from 'filter-builder-core';
 import { getInputComponent, type ValueInputRegistry } from '../inputs/registry';
 
-function isCondition(n: FilterNode): n is { field: string; operator: string; value?: unknown } {
-  return 'field' in n && 'operator' in n;
-}
-
-const noop = () => {};
-
 export type ValueEditorProps = {
   id?: string;
   schema: Schema;
@@ -20,7 +14,6 @@ export type ValueEditorProps = {
 
 export const ValueEditor: React.FC<ValueEditorProps> = ({
   id,
-  schema,
   field,
   operator,
   value,

@@ -1,97 +1,64 @@
 import * as React from 'react';
+import type { ValueType } from 'filter-builder-core';
 
+// Props for each input kind
 export type TextInputProps = {
-  id?: string;
-  value: string;
-  onChange: (next: string) => void;
-  'aria-label'?: string;
+  id?: string; value: string; onChange: (v: string) => void; 'aria-label'?: string;
 };
-export const TextInput: React.FC<TextInputProps> = ({ id, value, onChange, ...rest }) => (
-  <input
-    id={id}
-    type="text"
-    className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring focus:ring-indigo-500"
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    {...rest}
-  />
-);
-
 export type NumberInputProps = {
-  id?: string;
-  value: number | '';
-  onChange: (next: number | '') => void;
-  'aria-label'?: string;
+  id?: string; value: number | ''; onChange: (v: number | '') => void; 'aria-label'?: string;
 };
-export const NumberInput: React.FC<NumberInputProps> = ({ id, value, onChange, ...rest }) => (
-  <input
-    id={id}
-    type="number"
-    className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring focus:ring-indigo-500"
-    value={value}
-    onChange={(e) => {
-      const raw = e.target.value;
-      onChange(raw === '' ? '' : Number(raw));
-    }}
-    {...rest}
-  />
-);
-
 export type CheckboxInputProps = {
-  id?: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  'aria-label'?: string;
+  id?: string; checked: boolean; onChange: (v: boolean) => void; 'aria-label'?: string;
 };
-export const CheckboxInput: React.FC<CheckboxInputProps> = ({ id, checked, onChange, ...rest }) => (
-  <input
-    id={id}
-    type="checkbox"
-    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-    checked={checked}
-    onChange={(e) => onChange(e.target.checked)}
-    {...rest}
-  />
-);
-
 export type DateInputProps = {
-  id?: string;
-  value: string;
-  onChange: (next: string) => void;
-  'aria-label'?: string;
+  id?: string; value: string; onChange: (v: string) => void; 'aria-label'?: string;
 };
-export const DateInput: React.FC<DateInputProps> = ({ id, value, onChange, ...rest }) => (
-  <input
-    id={id}
-    type="date"
-    className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring focus:ring-indigo-500"
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    {...rest}
-  />
-);
 
 export type ValueInputRegistry = {
-  string: React.ComponentType<TextInputProps>;
-  number: React.ComponentType<NumberInputProps>;
-  boolean: React.ComponentType<CheckboxInputProps>;
-  date: React.ComponentType<DateInputProps>;
+  string: React.FC<TextInputProps>;
+  number: React.FC<NumberInputProps>;
+  boolean: React.FC<CheckboxInputProps>;
+  date: React.FC<DateInputProps>;
 };
 
-export const defaultInputs: ValueInputRegistry = {
+// Minimal, accessible Tailwind-styled inputs (can be swapped by consumers)
+const TextInput: React.FC<TextInputProps> = ({ id, value, onChange, ...rest }) => (
+    <input id={id} className="w-full rounded-md border px-2 py-1 text-sm"
+           value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
+);
+
+const NumberInput: React.FC<NumberInputProps> = ({ id, value, onChange, ...rest }) => (
+    <input id={id} type="number" className="w-full rounded-md border px-2 py-1 text-sm"
+           value={value} onChange={(e) => {
+      const v = e.target.value;
+      onChange(v === '' ? '' : Number.isNaN(Number(v)) ? '' : Number(v));
+    }} {...rest} />
+);
+
+const CheckboxInput: React.FC<CheckboxInputProps> = ({ id, checked, onChange, ...rest }) => (
+    <input id={id} type="checkbox" className="h-4 w-4 rounded border-gray-300"
+           checked={checked} onChange={(e) => onChange(e.target.checked)} {...rest} />
+);
+
+const DateInput: React.FC<DateInputProps> = ({ id, value, onChange, ...rest }) => (
+    <input id={id} type="date" className="w-full rounded-md border px-2 py-1 text-sm"
+           value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
+);
+
+// Exported defaults
+export const defaultRegistry: ValueInputRegistry = {
   string: TextInput,
   number: NumberInput,
-  boolean: (props: any) => {
-    const Comp = CheckboxInput as React.ComponentType<CheckboxInputProps>;
-    return <Comp {...props} />;
-  },
-  date: DateInput
+  boolean: CheckboxInput,
+  date: DateInput,
 };
 
-export function getInputComponent<T extends keyof ValueInputRegistry>(
-  registry: ValueInputRegistry | undefined,
-  type: T
-): ValueInputRegistry[T] {
-  const source = registry ?? defaultInputs;
-  return source[type];
+/** Merge user-provided overrides with our defaults and return a component for the value type. */
+export function getInputComponent<T extends ValueType>(
+    user: Partial<ValueInputRegistry> | undefined,
+    type: T
+) {
+  const merged = { ...defaultRegistry, ...(user ?? {}) } as ValueInputRegistry;
+  return merged[type];
 }

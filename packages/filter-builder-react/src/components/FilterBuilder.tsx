@@ -23,16 +23,15 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({ schema, value, onC
     <div className={className}>
       {'and' in value || 'or' in value ? (
         <GroupNodeEditor
-          node={value as any}
+          node={value}
           schema={schema}
-          onChange={handleChange as any}
+          onChange={handleChange}
         />
       ) : (
-        // seed a group if only a solitary condition is passed
         <GroupNodeEditor
           node={{ and: [value] }}
           schema={schema}
-          onChange={handleChange as any}
+          onChange={handleChange}
         />
       )}
     </div>
