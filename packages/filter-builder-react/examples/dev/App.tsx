@@ -8,6 +8,8 @@ import {
   type FilterNode,
   type OperatorDef,
 } from 'filter-builder-core';
+import { filterRows } from './evaluation';
+import { InvalidSchemaOperationError } from './InvalidSchemaOperationError';
 
 // ---- Demo data ---------------------------------------------------------------
 
@@ -49,11 +51,11 @@ const initialSchema: Schema = createSchema(
 );
 
 const sampleRows: Array<Record<string, unknown>> = [
-  { id: 1, name: 'Alice', role: 'admin', age: 31, country: 'de', isActive: true, joined: '2021-01-05' },
-  { id: 2, name: 'Bob', role: 'editor', age: 26, country: 'us', isActive: false, joined: '2020-07-22' },
-  { id: 3, name: 'Cara', role: 'viewer', age: 42, country: 'gb', isActive: true, joined: '2019-11-13' },
-  { id: 4, name: 'Dieter', role: 'admin', age: 29, country: 'de', isActive: true, joined: '2023-03-18' },
-  { id: 5, name: 'Eve', role: 'editor', age: 35, country: 'fr', isActive: false, joined: '2022-09-09' },
+  { id: 1, name: 'Alice', role: 'admin',  age: 31, country: 'de', isActive: true,  joined: '2021-01-05' },
+  { id: 2, name: 'Bob',   role: 'editor', age: 26, country: 'us', isActive: false, joined: '2020-07-22' },
+  { id: 3, name: 'Cara',  role: 'viewer', age: 42, country: 'gb', isActive: true,  joined: '2019-11-13' },
+  { id: 4, name: 'Dieter',role: 'admin',  age: 29, country: 'de', isActive: true,  joined: '2023-03-18' },
+  { id: 5, name: 'Eve',   role: 'editor', age: 35, country: 'fr', isActive: false, joined: '2022-09-09' },
 ];
 
 // ---- Helpers ----------------------------------------------------------------
@@ -68,7 +70,7 @@ function exampleValueFor(type: string): unknown {
   }
 }
 
-/** Validate a schema using the core validator with a probe condition per field. */
+/** Validate a schema by probing one condition per field using the core validator. */
 function collectSchemaIssuesWithCore(schema: Schema): string[] {
   const api = createFilterApi(schema);
   if (schema.operators.length === 0) {
@@ -80,9 +82,7 @@ function collectSchemaIssuesWithCore(schema: Schema): string[] {
         schema.operators.find((o) => o.key === 'eq') ?? schema.operators[0];
     const probe: FilterNode = { field: f.key, operator: op.key, value: exampleValueFor(f.type) };
     const res = api.validate(probe);
-    if (!res.valid) {
-      for (const msg of res.issues) issues.push(`[${f.key}] ${msg}`);
-    }
+    if (!res.valid) for (const msg of res.issues) issues.push(`[${f.key}] ${msg}`);
   }
   return issues;
 }
@@ -120,9 +120,27 @@ export const App: React.FC = () => {
   const qp = api.toQueryParam(encoded);
   const validation = api.validate(decoded);
 
-  // Show results only when the filter is valid (keeps demo simple)
-  const columns = React.useMemo(() => unionKeys(sampleRows), []);
-  const visibleRows = validation.valid ? sampleRows : [];
+  // Evaluate with current schema; catch explicit evaluation errors
+  const evaluation = React.useMemo(() => {
+    if (!validation.valid) {
+      return { rows: [] as Array<Record<string, unknown>>, error: null as string | null };
+    }
+    try {
+      const rows = filterRows(schema, decoded, sampleRows);
+      return { rows, error: null as string | null };
+    } catch (e) {
+      if (e instanceof InvalidSchemaOperationError) {
+        return { rows: [] as Array<Record<string, unknown>>, error: e.message };
+      }
+      return { rows: [] as Array<Record<string, unknown>>, error: 'Unexpected evaluation error.' };
+    }
+  }, [schema, decoded, validation.valid]);
+
+  // Columns: derive from current evaluation (fallback to sampleRows when empty)
+  const columns = React.useMemo(
+      () => unionKeys(evaluation.rows.length ? evaluation.rows : sampleRows),
+      [evaluation.rows],
+  );
 
   // --- Editors: Fields JSON & Operator Map JSON ------------------------------
 
@@ -185,13 +203,13 @@ export const App: React.FC = () => {
     }
   };
 
-  // Keep these two editors in sync when schema changes externally
+  // Keep editors in sync when schema changes externally
   React.useEffect(() => {
     setFieldsDraft(JSON.stringify(schema.fields, null, 2));
     setOpsDraft(JSON.stringify(schema.operatorMap, null, 2));
   }, [schema]);
 
-  // --- Canonical JSON (editable) with "dirty" guard --------------------------
+  // --- Canonical JSON with "dirty" guard --------------------------
 
   const [canonDraft, setCanonDraft] = React.useState<string>(() =>
       JSON.stringify(decoded, null, 2),
@@ -199,7 +217,7 @@ export const App: React.FC = () => {
   const [canonError, setCanonError] = React.useState<string | null>(null);
   const [canonDirty, setCanonDirty] = React.useState<boolean>(false);
 
-  // IMPORTANT: Only sync from state → editor when not dirty.
+  // Only sync from state → editor when not dirty.
   React.useEffect(() => {
     if (!canonDirty) {
       setCanonDraft(JSON.stringify(decoded, null, 2));
@@ -223,7 +241,6 @@ export const App: React.FC = () => {
         return;
       }
 
-      // Accept: normalize and store
       const normalized = api.decode(node);
       setTree(normalized);
       setCanonDraft(JSON.stringify(normalized, null, 2));
@@ -235,7 +252,6 @@ export const App: React.FC = () => {
   };
 
   const resetCanon = () => {
-    // Discard edits and resync from current decoded tree
     setCanonDraft(JSON.stringify(decoded, null, 2));
     setCanonError(null);
     setCanonDirty(false);
@@ -252,7 +268,7 @@ export const App: React.FC = () => {
           {/* Fields JSON */}
           <div className="rounded-lg border bg-white p-3">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold">Fields JSON (editable)</h2>
+              <h2 className="text-sm font-semibold">Fields JSON</h2>
               <button
                   type="button"
                   onClick={applyFields}
@@ -279,7 +295,7 @@ export const App: React.FC = () => {
           {/* Operator Map JSON */}
           <div className="rounded-lg border bg-white p-3">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold">Operator Map JSON (editable)</h2>
+              <h2 className="text-sm font-semibold">Operator Map JSON</h2>
               <button
                   type="button"
                   onClick={applyOps}
@@ -302,6 +318,8 @@ export const App: React.FC = () => {
                 <p className="mt-2 text-xs text-green-700">Operator map OK</p>
             )}
           </div>
+          {/* @Fix add here a text area with the json object (data used for filtering) */}
+
         </section>
 
         {/* Filter Builder + Diagnostics */}
@@ -314,10 +332,10 @@ export const App: React.FC = () => {
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Canonical JSON (editable) */}
+            {/* Canonical JSON */}
             <div className="rounded-lg border bg-white p-3">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-semibold">Canonical JSON (editable)</h2>
+                <h2 className="text-sm font-semibold">Canonical JSON</h2>
                 <div className="flex gap-2">
                   {canonDirty && (
                       <span className="text-xs text-amber-700 self-center">
@@ -395,19 +413,26 @@ export const App: React.FC = () => {
               </tr>
               </thead>
               <tbody>
-              {visibleRows.map((row, rIdx) => (
+              {evaluation.rows.map((row, rIdx) => (
                   <tr key={rIdx} className="border-t">
                     {columns.map((k) => (
-                        <td key={k} className="px-3 py-1">
-                          {String(row[k] ?? '')}
-                        </td>
+                        <td key={k} className="px-3 py-1">{String(row[k] ?? '')}</td>
                     ))}
                   </tr>
               ))}
-              {!validation.valid && (
+              {(!validation.valid || evaluation.error) && (
                   <tr className="border-t">
                     <td className="px-3 py-2 text-xs text-amber-700" colSpan={columns.length}>
-                      Results hidden because current filter is invalid.
+                      {!validation.valid
+                          ? 'Results hidden because current filter is invalid.'
+                          : evaluation.error}
+                    </td>
+                  </tr>
+              )}
+              {validation.valid && !evaluation.error && evaluation.rows.length === 0 && (
+                  <tr className="border-t">
+                    <td className="px-3 py-2 text-xs text-gray-500" colSpan={columns.length}>
+                      No rows match the current filter.
                     </td>
                   </tr>
               )}
