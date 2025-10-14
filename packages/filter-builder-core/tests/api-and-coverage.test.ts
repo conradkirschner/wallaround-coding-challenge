@@ -105,4 +105,49 @@ describe('API coverage', () => {
       ]),
     ).toThrow();
   });
+
+  //
+  // ── Static string ⇄ object tests ───────────────────────────────────────────────
+  //
+
+  it('toQueryParam produces deterministic output for a known JSON string', () => {
+    const s = '{"field":"role","operator":"=","value":"admin"}';
+    const node = JSON.parse(s) as FilterNode;
+    const qp = api.toQueryParam(node);
+    expect(qp).toBe(`filter=${encodeURIComponent(s)}`);
+  });
+
+  it('withFilterInUrl appends encoded filter deterministically (base without / with query)', () => {
+    const s = '{"field":"role","operator":"=","value":"admin"}';
+    const node = JSON.parse(s) as FilterNode;
+
+    const url1 = api.withFilterInUrl('/search', node);
+    expect(url1).toBe(`/search?filter=${encodeURIComponent(s)}`);
+
+    const url2 = api.withFilterInUrl('/search?page=1', node);
+    expect(url2).toBe(`/search?page=1&filter=${encodeURIComponent(s)}`);
+  });
+
+  it('decode→encode is stable for a known target JSON string (deep tree)', () => {
+    const s =
+      '{"and":[{"field":"age","operator":"gt","value":30},{"or":[{"field":"role","operator":"=","value":"admin"},{"field":"isActive","operator":"=","value":true}]}]}';
+    const decoded = api.decode(JSON.parse(s) as FilterNode);
+    const reencoded = api.encode(decoded);
+    const out = JSON.stringify(reencoded);
+    expect(out).toBe(s); // stable canonicalization for this input
+  });
+
+  it('validate accepts a valid known-good JSON string', () => {
+    const s = '{"field":"age","operator":"between","value":[18,65]}';
+    const res = api.validate(JSON.parse(s) as FilterNode);
+    expect(res.valid).toBe(true);
+    expect(res.issues).toEqual([]);
+  });
+
+  it('validate rejects a known-bad JSON string with stable message', () => {
+    const s = '{"field":"unknownField","operator":"=","value":"x"}';
+    const res = api.validate(JSON.parse(s) as FilterNode);
+    expect(res.valid).toBe(false);
+    expect(res.issues[0]).toBe("$.field: Unknown field 'unknownField'");
+  });
 });

@@ -1,3 +1,2 @@
-export * from './publicTypes';
-export * from './components/FilterBuilder';
-export * from './styles.css';
+export { FilterBuilder } from './components/FilterBuilder';
+export type { ValueInputRegistry } from './inputs/registry';

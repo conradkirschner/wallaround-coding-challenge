@@ -10,8 +10,8 @@ describe('schema', () => {
     ],
     {
       // purposefully exclude some operators to exercise both seed+merge branches
-      string: ['eq', 'contains'],   // seed path (string-only)
-      number: ['eq', 'between'],    // merge path (eq across string+number)
+      string: ['eq', 'contains'],   // string-only
+      number: ['eq', 'between'],    // eq across string+number; between only for number
       boolean: ['eq', 'neq'],
       date: ['eq', 'before'],
     },
@@ -41,21 +41,28 @@ describe('schema', () => {
     expect(findOperator(schema, 'after')).toBeUndefined();
   });
 
-  it('handles nullish operator arrays via (keys ?? []) path', () => {
-    // Override "date" with an explicit undefined to trigger the nullish coalescing branch.
-    // This ensures Object.entries(resolved) yields ["date", undefined] and (keys ?? [])
-    // evaluates to [], covering the previously untested branch.
+  it('treats undefined entries as empty and drops defaults when operatorMap is provided', () => {
+    // Providing operatorMap disables defaults globally; `date: undefined` => no date operators.
     const schemaWithUndefinedDate = createSchema(
       [{ key: 'created', label: 'Created', type: 'date' }],
-      { date: undefined } // override defaults with undefined
+      { date: undefined }
     );
 
-    // Since "date" operators were overridden to undefined, date-only ops like "before" are absent.
+    // Since "date" operators were explicitly undefined, date-only ops like "before" are absent.
     expect(findOperator(schemaWithUndefinedDate, 'before')).toBeUndefined();
 
-    // Sanity check: other types still work from defaults (e.g., string eq exists even without fields).
-    const eq = findOperator(schemaWithUndefinedDate, 'eq');
+    // And since an operatorMap was provided, *no defaults* are applied for other types.
+    // So even a common operator like "eq" is absent unless explicitly requested.
+    expect(findOperator(schemaWithUndefinedDate, 'eq')).toBeUndefined();
+
+    // Sanity: enabling an operator explicitly makes it appear
+    const schemaWithStringEq = createSchema(
+      [{ key: 'name', label: 'Name', type: 'string' }],
+      { string: ['eq'] }
+    );
+    const eq = findOperator(schemaWithStringEq, 'eq');
     expect(eq).toBeTruthy();
+    expect(eq?.supportedTypes).toEqual(['string']);
   });
 
   it('findField returns undefined for unknown field key', () => {

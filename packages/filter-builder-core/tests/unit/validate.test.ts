@@ -160,3 +160,13 @@ describe('validate (extra coverage)', () => {
   });
 
 });
+
+describe('validate – refine predicate on group', () => {
+  const schema = createSchema([{ key: 'n', label: 'Name', type: 'string' }]);
+  it('rejects a group that has both and/or', () => {
+    const invalid = { and: [], or: [] } as unknown as FilterNode;
+    const res = validateNode(invalid, schema);
+    expect(res.valid).toBe(false);
+    expect(res.issues.some((m) => m.includes("either 'and' or 'or'"))).toBe(true);
+  });
+});
