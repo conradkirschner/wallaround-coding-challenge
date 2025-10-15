@@ -1,36 +1,53 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "composite": true,
-    "declaration": true,
-    "declarationMap": false,
-    "emitDeclarationOnly": false,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "jsx": "react-jsx",
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
-    "paths": {
-      "filter-builder-react": ["./src/index.ts"],
-      "filter-builder-core": ["../filter-builder-core/src/index.ts"]
-    },
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "moduleDetection": "force",
+
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+
+    "baseUrl": ".",
+    "paths": {},
+
     "noEmit": true,
-    "outDir": "dist",
-    "resolveJsonModule": true,
-    "rootDir": "src",
-    "skipLibCheck": true,
+    "declaration": false,
+    "sourceMap": true,
+    "incremental": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo",
+
     "strict": true,
-    "target": "ES2022",
-    "types": [
-      "vite/client"
-    ]
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "useUnknownInCatchVariables": true,
+
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "useDefineForClassFields": true,
+    "skipLibCheck": true,
+
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "newLine": "lf"
   },
   "include": [
     "src/**/*",
-    "examples/dev/**/*"
+    "examples/dev/**/*",
+    "vite.config.*",
+    "eslint.config.*",
+    "cypress.config.*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "coverage",
+    "cypress" // Cypress uses tsconfig.cypress.json
   ]
 }

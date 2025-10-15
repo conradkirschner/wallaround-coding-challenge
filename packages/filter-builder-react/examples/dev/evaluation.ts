@@ -1,5 +1,5 @@
 import type { Schema, FilterNode } from 'filter-builder-core';
-import { InvalidSchemaOperationError } from './InvalidSchemaOperationError';
+import { InvalidSchemaOperationError } from './errors';
 
 type ConditionNode = Extract<FilterNode, { field: string; operator: string; value?: unknown }>;
 type Scalar = string | number | boolean | Date | null | undefined;

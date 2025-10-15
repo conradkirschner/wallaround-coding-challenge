@@ -25,25 +25,79 @@
     "react-dom": ">=18"
   },
   "devDependencies": {
-    "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.20",
+    "@cypress/code-coverage": "^3.14.7",
+    "@types/node": "^22.8.6",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "autoprefixer": "^10.4.21",
+    "cross-env": "^7.0.3",
+    "cypress": "^15.4.0",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.0",
     "filter-builder-core": "*",
-    "postcss": "^8.4.49",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwindcss": "^3.4.14",
+    "jsdom": "^27.0.0",
+    "nyc": "^15.1.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "rimraf": "^6.0.1",
+    "tailwindcss": "^4.1.14",
     "ts-node": "^10.9.2",
-    "tsup": "^8.1.0",
-    "typescript": "^5.6.2",
-    "vite": "^5.4.9"
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.10",
+    "vite-plugin-istanbul": "^6.0.0",
+    "vitest": "^3.2.4"
   },
   "scripts": {
     "build": "tsup",
     "dev": "vite examples/dev",
     "preview": "vite preview --host --port 5174 --outDir examples/dev/dist",
-    "clean": "rm -rf dist",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "clean": "rimraf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives --max-warnings=0",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "cy:open": "cypress open",
+    "test:e2e": "cypress run",
+    "test:e2e:coverage": "cross-env NODE_ENV=test cypress run && nyc report --reporter=text-summary --reporter=lcov --report-dir coverage/cypress"
+  },
+  "vitest": {
+    "environment": "jsdom",
+    "coverage": {
+      "provider": "v8",
+      "enabled": true,
+      "reports": [
+        "text",
+        "html",
+        "lcov"
+      ],
+      "reportOnFailure": true
+    }
+  },
+  "nyc": {
+    "reporter": [
+      "text-summary",
+      "lcov",
+      "html"
+    ],
+    "report-dir": "coverage/cypress",
+    "all": false,
+    "excludeAfterRemap": false
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.14"
   }
 }

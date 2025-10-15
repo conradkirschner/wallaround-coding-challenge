@@ -1,14 +1,23 @@
 // vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import tailwindcss from 'tailwindcss';
+import istanbul from 'vite-plugin-istanbul';
+import tailwindcss from '@tailwindcss/postcss';
 import autoprefixer from 'autoprefixer';
 import * as path from "node:path";
 
 export default defineConfig({
-  root: path.resolve(__dirname, 'examples/dev'),
-
-plugins: [react()],
+  root: path.resolve(__dirname, '.'),
+  plugins: [
+    react(),
+    istanbul({
+      include: ['src/**/*'],
+      exclude: ['node_modules', 'test', 'cypress', 'dist'],
+      extension: ['.ts', '.tsx'],
+      cypress: true,
+      requireEnv: false
+    }),
+  ],
   css: {
     postcss: {
       plugins: [tailwindcss(), autoprefixer()],
