@@ -8,8 +8,7 @@ type RequestTesterProps = {
 
   url: string;
   onUrlChange: (s: string) => void;
-
-  body: string; // JSON draft (used only for POST)
+  body: string;
   onBodyChange: (s: string) => void;
   isBodyDirty?: boolean;
   onResetBody?: () => void;

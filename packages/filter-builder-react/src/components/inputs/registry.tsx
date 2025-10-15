@@ -1,7 +1,6 @@
 import * as React from 'react';
 import type { ValueType } from 'filter-builder-core';
 
-// Props for each input kind
 export type TextInputProps = {
   id?: string;
   value: string;

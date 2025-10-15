@@ -83,7 +83,10 @@ export function useRequestTester({ api, encoded, setRows }: Params) {
       setRows(next);
       setSuccess(`Loaded ${next.length} row(s) from server.`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof HttpRequestError) {
+        setError(e.message);
+      }
+      throw e;
     } finally {
       setLoading(false);
     }

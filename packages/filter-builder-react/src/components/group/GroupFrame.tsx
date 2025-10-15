@@ -2,7 +2,7 @@ import * as React from 'react';
 
 export type GroupFrameProps = {
   groupLabelId: string;
-  className?: string;
+  className?: string | undefined;
   testId?: string;
   header: React.ReactNode;
   childrenList: React.ReactNode; // the <ul> of children

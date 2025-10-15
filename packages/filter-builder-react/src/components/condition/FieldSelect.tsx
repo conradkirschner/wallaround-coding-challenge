@@ -4,7 +4,7 @@ import type { Field } from 'filter-builder-core';
 export type FieldSelectProps = {
   id: string;
   fields: ReadonlyArray<Field>;
-  value: string; // field key
+  value: string;
   onChange: (fieldKey: string) => void;
   testId?: string;
 };

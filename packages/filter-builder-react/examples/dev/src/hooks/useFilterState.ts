@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { type Schema, type FilterNode } from 'filter-builder-core';
+import { type FilterNode } from 'filter-builder-core';
 import { pretty, safeParseJSON } from '../utils/json';
 
 export function useFilterState(

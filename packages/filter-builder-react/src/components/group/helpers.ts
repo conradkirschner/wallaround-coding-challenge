@@ -35,8 +35,8 @@ export function firstCondition(schema: Schema): ConditionNode {
     throw new Error('Schema must include at least one field.');
   }
   for (const f of schema.fields) {
-    const op: OperatorDef | undefined = schema.operators.find((o) =>
-      o.supportedTypes.includes(f.type),
+    const op: OperatorDef | undefined = schema.operators.find(
+      (o: { supportedTypes: string | any[] }) => o.supportedTypes.includes(f.type),
     );
     if (op) return { field: f.key, operator: op.key };
   }

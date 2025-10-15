@@ -5,7 +5,7 @@ export type HttpMethod = 'GET' | 'POST';
 type MethodToggleProps = {
   value: HttpMethod;
   onChange: (m: HttpMethod) => void;
-  testId?: string;
+  testId?: string | undefined;
   ariaLabel?: string;
 };
 

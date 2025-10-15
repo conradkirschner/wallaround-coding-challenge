@@ -21,9 +21,13 @@
     "types": ["vite/client", "cypress", "node"],
     "baseUrl": ".",
     "paths": {
-      "filter-builder-react": ["./src/index.ts"]
+      "filter-builder-react": ["./src/index.ts"],
+      "filter-builder-core": ["../filter-builder-code/src/index.ts"],
+      "filter-builder-core/*": ["../filter-builder-code/src/*"]
     }
   },
+  "references": [{ "path": "../filter-builder-core" }],
+
   "include": ["src", "cypress", "examples", "vite.config.ts"],
   "exclude": ["dist", "coverage", "node_modules"]
 }

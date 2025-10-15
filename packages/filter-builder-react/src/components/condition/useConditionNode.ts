@@ -29,13 +29,11 @@ export function useConditionNode({
   const fields = schema.fields;
   const hasNoFields = fields.length === 0;
 
-  // Resolve the currently selected field (fallback to first if missing)
   const resolvedField = React.useMemo(() => {
     if (hasNoFields) return null;
     return findField(fields, node.field) ?? fields[0];
   }, [fields, node.field, hasNoFields]);
 
-  // Compute compatible operators for the effective field
   const compatibleOps = React.useMemo(() => {
     if (!resolvedField) return [];
     return getCompatibleOperators(schema.operators, resolvedField.type);
@@ -43,13 +41,11 @@ export function useConditionNode({
 
   const hasNoCompatibleOps = !hasNoFields && compatibleOps.length === 0;
 
-  // Current operator if still compatible, else first compatible
   const currentOp = React.useMemo(() => {
     if (!resolvedField || compatibleOps.length === 0) return null;
     return compatibleOps.find((o) => o.key === node.operator) ?? compatibleOps[0];
   }, [resolvedField, compatibleOps, node.operator]);
 
-  // Auto-heal: when field/operator is incompatible, rewrite node minimally
   React.useEffect(() => {
     if (!resolvedField || !currentOp) return;
     if (node.field !== resolvedField.key || node.operator !== currentOp.key) {

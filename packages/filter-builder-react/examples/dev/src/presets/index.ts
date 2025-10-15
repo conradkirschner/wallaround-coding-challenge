@@ -11,7 +11,6 @@ export {
   PRODUCTS_DEFAULT_TREE,
 } from './products';
 
-// Handy map for lookups in the app:
 import type { DemoPreset } from './types';
 import { USERS_PRESET } from './users';
 import { PRODUCTS_PRESET } from './products';

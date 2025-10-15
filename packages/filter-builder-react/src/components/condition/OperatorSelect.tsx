@@ -4,7 +4,7 @@ import type { OperatorDef } from 'filter-builder-core';
 export type OperatorSelectProps = {
   id: string;
   operators: ReadonlyArray<OperatorDef>;
-  value: string; // operator key
+  value: string;
   onChange: (opKey: string) => void;
   testId?: string;
 };

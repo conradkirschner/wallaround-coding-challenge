@@ -3,7 +3,7 @@ export class HttpRequestError extends Error {
     message: string,
     public status?: number,
   ) {
-    super(message);
+    super(`${message}: ${status}`);
     this.name = 'HttpRequestError';
   }
 }

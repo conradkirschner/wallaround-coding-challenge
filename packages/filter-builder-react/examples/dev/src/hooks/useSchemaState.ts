@@ -62,6 +62,6 @@ export function useSchemaState({ initialSchema }: Params) {
     setOpsDraft,
     opsError,
     applyOps,
-    setSchema, // expose for presets
+    setSchema,
   };
 }

@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 type CardProps = React.HTMLAttributes<HTMLDivElement> & {
-  'data-test-id'?: string;
+  'data-test-id'?: string | undefined;
   title?: string;
   actions?: React.ReactNode;
   ariaLabel?: string;

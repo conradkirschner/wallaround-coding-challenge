@@ -181,7 +181,7 @@ export const App: React.FC = () => {
               </span>
               {!evalState.validation.valid && (
                 <ul className="list-disc ml-5 mt-1" data-test-id="validation-issues">
-                  {evalState.validation.issues.map((i, idx) => (
+                  {evalState.validation.issues.map((i: string, idx: number) => (
                     <li key={idx}>{i}</li>
                   ))}
                 </ul>

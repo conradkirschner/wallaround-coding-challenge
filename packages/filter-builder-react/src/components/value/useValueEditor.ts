@@ -76,13 +76,13 @@ export type ManyHandlers =
     };
 
 export type UseValueEditorArgs = {
-  id?: string;
-  schema: Schema;
+  id?: string | undefined;
+  schema?: Schema | undefined;
   field: Field;
   operator: OperatorDef;
   value: unknown;
   onChange: (next: unknown) => void;
-  inputs?: PartialRegistryMap;
+  inputs?: PartialRegistryMap | undefined;
 };
 
 export type UseValueEditorResult =
@@ -108,12 +108,10 @@ export function useValueEditor({
   const Checkbox = React.useMemo(() => getTypedInput(inputs, 'boolean'), [inputs]);
   const DateInput = React.useMemo(() => getTypedInput(inputs, 'date'), [inputs]);
 
-  // ---- NONE -----------------------------------------------------------------
   if (operator.valueArity === 'none') {
     return { arity: 'none' };
   }
 
-  // ---- ONE ------------------------------------------------------------------
   if (operator.valueArity === 'one') {
     const opts = fieldOptions(field);
 
@@ -191,7 +189,6 @@ export function useValueEditor({
     };
   }
 
-  // ---- TWO ------------------------------------------------------------------
   if (operator.valueArity === 'two') {
     const a = Array.isArray(value) ? value[0] : undefined;
     const b = Array.isArray(value) ? value[1] : undefined;
@@ -255,7 +252,6 @@ export function useValueEditor({
     return { arity: 'two', handlers: { a: mkOne('a'), b: mkOne('b') } };
   }
 
-  // ---- MANY -----------------------------------------------------------------
   const opts = fieldOptions(field);
   if (opts.length > 0) {
     const arr = Array.isArray(value) ? (value as unknown[]).map(String) : [];

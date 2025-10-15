@@ -1,4 +1,4 @@
-import type { Schema, FilterNode } from 'filter-builder-core';
+import type { Schema, FilterNode, Field } from 'filter-builder-core';
 import { InvalidSchemaOperationError } from './errors';
 
 type ConditionNode = Extract<FilterNode, { field: string; operator: string; value?: unknown }>;
@@ -48,8 +48,8 @@ function evaluateCondition(
   row: Record<string, unknown>,
   c: ConditionNode,
 ): boolean {
-  const field = schema.fields.find((f) => f.key === c.field);
-  if (!field) return false; // unknown field → fail closed
+  const field = schema.fields.find((f: Field) => f.key === c.field);
+  if (!field) return false;
 
   const left = coerceToType(row[c.field], field.type);
 
@@ -156,8 +156,8 @@ export function evaluateRow(
   row: Record<string, unknown>,
 ): boolean {
   if ('field' in node) return evaluateCondition(schema, row, node);
-  if ('and' in node) return node.and.every((n) => evaluateRow(schema, n, row));
-  return node.or.some((n) => evaluateRow(schema, n, row));
+  if ('and' in node) return node.and.every((n: FilterNode) => evaluateRow(schema, n, row));
+  return node.or.some((n: FilterNode) => evaluateRow(schema, n, row));
 }
 
 /** Convenience: filter an array of rows. */

@@ -5,8 +5,8 @@ export type GroupToolbarProps = {
   kind: GroupKind;
   labelId: string;
   onToggleKind: () => void;
-  onRemove?: () => void;
-  testId?: string;
+  onRemove?:  (() => void) | undefined;
+  testId?: string | undefined;
 };
 
 const KindPill: React.FC<{ kind: GroupKind }> = ({ kind }) => (

@@ -3,7 +3,7 @@ import * as React from 'react';
 export type ConditionFrameProps = {
   header: React.ReactNode;
   children: React.ReactNode;
-  className?: string;
+  className: string | undefined;
   testId?: string;
 };
 

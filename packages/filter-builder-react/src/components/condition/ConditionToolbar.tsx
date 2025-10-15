@@ -1,8 +1,8 @@
 import * as React from 'react';
 
 export type ConditionToolbarProps = {
-  onRemove?: () => void;
-  testId?: string;
+  onRemove?:  (() => void) | undefined;
+  testId?: string | undefined;
 };
 
 export const ConditionToolbar: React.FC<ConditionToolbarProps> = ({

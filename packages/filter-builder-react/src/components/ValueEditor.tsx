@@ -18,7 +18,6 @@ export type ValueEditorProps = {
 
 export const ValueEditor: React.FC<ValueEditorProps> = React.memo(function ValueEditor({
   id,
-  schema,
   field,
   operator,
   value,
@@ -27,7 +26,7 @@ export const ValueEditor: React.FC<ValueEditorProps> = React.memo(function Value
   className,
   testId = 'value-editor',
 }) {
-  const model = useValueEditor({ id, field, operator, value, onChange, inputs });
+  const model = useValueEditor({ id, field, operator, value, onChange, inputs, schema: undefined });
 
   if (model.arity === 'none') {
     return <NoValuePill testId={`${testId}-none`} />;

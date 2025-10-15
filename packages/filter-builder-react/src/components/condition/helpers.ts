@@ -1,4 +1,4 @@
-import type { Schema, Field, OperatorDef, FilterNode } from 'filter-builder-core';
+import type { Field, OperatorDef, FilterNode } from 'filter-builder-core';
 
 /** Narrowed type for a leaf condition node. */
 export type ConditionNode = Extract<
@@ -17,6 +17,8 @@ export function normalizeValueForArity(prev: unknown, arity: OperatorDef['valueA
       return Array.isArray(prev) && prev.length === 2 ? prev : ['', ''];
     case 'many':
       return Array.isArray(prev) ? prev : [];
+    default:
+      return undefined;
   }
 }
 

@@ -22,14 +22,21 @@ export function exampleValueFor(type: string): unknown {
 
 export function collectSchemaIssuesWithCore(schema: Schema): string[] {
   const api = createFilterApi(schema);
-  if (schema.operators.length === 0)
+
+  const ops = schema.operators;
+  if (ops.length === 0) {
     return ['No operators available in schema (operator map resolved to empty set).'];
+  }
+
   const issues: string[] = [];
   for (const f of schema.fields) {
-    const op: OperatorDef = schema.operators.find((o) => o.key === 'eq') ?? schema.operators[0];
+    const op: OperatorDef = ops.find((o: OperatorDef) => o.key === 'eq') ?? ops[0]!;
+
     const probe: FilterNode = { field: f.key, operator: op.key, value: exampleValueFor(f.type) };
     const res = api.validate(probe);
-    if (!res.valid) for (const msg of res.issues) issues.push(`[${f.key}] ${msg}`);
+    if (!res.valid) {
+      for (const msg of res.issues) issues.push(`[${f.key}] ${msg}`);
+    }
   }
   return issues;
 }
