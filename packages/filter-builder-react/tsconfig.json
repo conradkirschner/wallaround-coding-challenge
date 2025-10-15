@@ -1,53 +1,29 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "moduleResolution": "Bundler",
-    "moduleDetection": "force",
-
+    "allowJs": false,
+    "checkJs": false,
     "jsx": "react-jsx",
-    "types": ["vite/client"],
-
-    "baseUrl": ".",
-    "paths": {},
-
-    "noEmit": true,
-    "declaration": false,
-    "sourceMap": true,
-    "incremental": true,
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo",
-
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "useUnknownInCatchVariables": true,
-
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "useDefineForClassFields": true,
+    "noImplicitReturns": true,
+    "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
-
-    "allowJs": false,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "newLine": "lf"
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "types": ["vite/client", "cypress", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "filter-builder-react": ["./src/index.ts"]
+    }
   },
-  "include": [
-    "src/**/*",
-    "examples/dev/**/*",
-    "vite.config.*",
-    "eslint.config.*",
-    "cypress.config.*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "coverage",
-    "cypress" // Cypress uses tsconfig.cypress.json
-  ]
+  "include": ["src", "cypress", "examples", "vite.config.ts"],
+  "exclude": ["dist", "coverage", "node_modules"]
 }

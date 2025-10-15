@@ -1,42 +1,32 @@
-// vite.config.ts
-import { defineConfig } from 'vite';
+import { defineConfig, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
 import istanbul from 'vite-plugin-istanbul';
-import tailwindcss from '@tailwindcss/postcss';
-import autoprefixer from 'autoprefixer';
-import * as path from "node:path";
+import * as path from 'node:path';
+
+const coverageEnabled = process.env.VITE_COVERAGE === 'true';
 
 export default defineConfig({
   root: path.resolve(__dirname, '.'),
   plugins: [
     react(),
-    istanbul({
-      include: ['src/**/*'],
-      exclude: ['node_modules', 'test', 'cypress', 'dist'],
-      extension: ['.ts', '.tsx'],
+    (istanbul({
       cypress: true,
-      requireEnv: false
-    }),
+      requireEnv: false,
+      include: ['src/**/*', 'dev/**/*', 'examples/**/*'],
+      exclude: ['node_modules', 'cypress', 'dist', 'coverage'],
+      extension: ['.ts', '.tsx', '.js', '.jsx'],
+      // @ts-expect-error plugin supports this at runtime
+      enabled: coverageEnabled,
+    }) as unknown) as PluginOption,
   ],
-  css: {
-    postcss: {
-      plugins: [tailwindcss(), autoprefixer()],
-    },
-  },
   resolve: {
     alias: {
-      // use the *source* while developing
       'filter-builder-react': path.resolve(__dirname, '../../src/index.ts'),
-      'filter-builder-core': path.resolve(
-          __dirname,
-          '../../../filter-builder-core/src/index.ts',
-      ),
+      'filter-builder-core': path.resolve(__dirname, '../../../filter-builder-core/src/index.ts'),
     },
-    // Helpful when using workspace symlinks
     preserveSymlinks: true,
   },
   optimizeDeps: {
-    // avoid esbuild pre-bundling these local libs
     exclude: ['filter-builder-react', 'filter-builder-core'],
   },
 });
