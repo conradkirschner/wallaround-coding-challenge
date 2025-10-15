@@ -1,5 +1,5 @@
 import React from 'react';
-import { JsonEditorCard } from '../../src/components/ui/JsonEditorCard';
+import { JsonEditorCard } from '../../examples/dev/src/components/ui/JsonEditorCard';
 
 describe('<JsonEditorCard />', () => {
   it('renders and applies', () => {

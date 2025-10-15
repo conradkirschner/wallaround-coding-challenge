@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
@@ -7,8 +9,6 @@ declare global {
   }
 }
 
-Cypress.Commands.add('getByTestId', (id: string) =>
-  cy.get(`[data-test-id="${id}"]`)
-);
+Cypress.Commands.add('getByTestId', (id: string) => cy.get(`[data-test-id="${id}"]`));
 
 export {};

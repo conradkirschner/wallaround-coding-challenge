@@ -59,6 +59,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "vite examples/dev",
+    "dev:coverage": "cross-env VITE_COVERAGE=true vite examples/dev",
+
     "preview": "vite preview --host --port 5174 --outDir examples/dev/dist",
     "clean": "rimraf dist",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -68,12 +70,13 @@
     "format:write": "prettier --write .",
     "cy:open": "cypress open",
     "test:e2e": "cypress run",
-    "cy:open:examples": "start-server-and-test dev http://localhost:5173 \"cypress open\"",
-    "test:e2e:examples": "start-server-and-test dev http://localhost:5173 \"cypress run\"",
+    "cy:open:examples:coverage": "start-server-and-test dev:coverage http://localhost:5173 \"cross-env VITE_COVERAGE=true cypress open\"",
+    "test:e2e:examples:coverage": "start-server-and-test dev:coverage http://localhost:5173 \"cross-env VITE_COVERAGE=true cypress run\"",
+
     "ct:open": "cypress open --component",
-    "test:ct": "cypress run --component",
+    "test:ct": "cross-env VITE_COVERAGE=true cypress run --component",
     "test": "npm run test:ct && npm run test:e2e",
-    "test:coverage": "cross-env NODE_ENV=test VITE_COVERAGE=true cypress run --component && cross-env NODE_ENV=test VITE_COVERAGE=true npm run test:e2e:examples && nyc report --reporter=text-summary --reporter=lcov --report-dir coverage/cypress"
+    "test:coverage": "npm run test:ct && npm run test:e2e:examples:coverage && nyc report --reporter=text-summary --reporter=lcov --report-dir coverage/cypress"
   },
   "nyc": {
     "reporter": [

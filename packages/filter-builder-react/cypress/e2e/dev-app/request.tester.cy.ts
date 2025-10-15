@@ -9,7 +9,7 @@ describe('Request tester', () => {
 
     cy.getByTestId('request-tester').within(() => {
       // url input
-      cy.get('input[type="url"], input[name="url"]').clear().type('/api/mock');
+      cy.getByTestId('request-tester__url').clear().type('/api/mock');
       cy.contains('button', 'Send').click();
     });
 
@@ -27,7 +27,7 @@ describe('Request tester', () => {
       cy.contains('button', /POST/i).click();
 
       // url input
-      cy.get('input[type="url"], input[name="url"]').clear().type('/api/mock');
+      cy.getByTestId('request-tester__url').clear().type('/api/mock');
 
       // optional: reset body if UI exposes the reset button
       cy.contains('button', /Reset Body/i).click({ force: true }).then(() => {});
