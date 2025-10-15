@@ -10,10 +10,14 @@ import {
 } from 'filter-builder-core';
 import { filterRows } from './evaluation';
 import { InvalidSchemaOperationError } from './InvalidSchemaOperationError';
+import { Card } from './components/ui/Card';
+import { JsonEditorCard } from './components/ui/JsonEditorCard';
+import { ResultsTable } from './components/ui/ResultsTable';
+import { RequestTester } from './components/ui/RequestTester';
+import type { HttpMethod } from './components/ui/MethodToggle';
 
-// ---- Presets & Demo data ----------------------------------------------------
+// ---------- Presets & common operator map ------------------------------------
 
-// Common operator map we’ll use for both presets
 const COMMON_OPS: OperatorMap = {
   string: ['eq', 'neq', 'contains', 'starts_with', 'ends_with', 'in', 'is_null', 'is_not_null'],
   number: ['eq', 'neq', 'gt', 'lt', 'between', 'in', 'is_null', 'is_not_null'],
@@ -21,32 +25,21 @@ const COMMON_OPS: OperatorMap = {
   date: ['eq', 'neq', 'before', 'after', 'between', 'is_null', 'is_not_null'],
 };
 
-// Users preset (your current example)
 const usersFields: Schema['fields'] = [
   { key: 'id', label: 'ID', type: 'number' },
   { key: 'name', label: 'Name', type: 'string' },
-  {
-    key: 'role',
-    label: 'Role',
-    type: 'string',
-    options: [
+  { key: 'role', label: 'Role', type: 'string', options: [
       { value: 'admin', label: 'Admin' },
       { value: 'editor', label: 'Editor' },
       { value: 'viewer', label: 'Viewer' },
-    ],
-  },
+    ]},
   { key: 'age', label: 'Age', type: 'number' },
-  {
-    key: 'country',
-    label: 'Country',
-    type: 'string',
-    options: [
+  { key: 'country', label: 'Country', type: 'string', options: [
       { value: 'de', label: 'Germany' },
       { value: 'us', label: 'United States' },
       { value: 'gb', label: 'United Kingdom' },
       { value: 'fr', label: 'France' },
-    ],
-  },
+    ]},
   { key: 'isActive', label: 'Active', type: 'boolean' },
   { key: 'joined', label: 'Joined', type: 'date' },
 ];
@@ -70,20 +63,14 @@ const usersDefaultTree: FilterNode = {
   ],
 };
 
-// Products preset
 const productsFields: Schema['fields'] = [
   { key: 'id', label: 'ID', type: 'number' },
   { key: 'name', label: 'Name', type: 'string' },
-  {
-    key: 'category',
-    label: 'Category',
-    type: 'string',
-    options: [
+  { key: 'category', label: 'Category', type: 'string', options: [
       { value: 'furniture', label: 'Furniture' },
       { value: 'books', label: 'Books' },
       { value: 'electronics', label: 'Electronics' },
-    ],
-  },
+    ]},
   { key: 'price', label: 'Price', type: 'number' },
   { key: 'inStock', label: 'In stock', type: 'boolean' },
   { key: 'createdAt', label: 'Created', type: 'date' },
@@ -105,7 +92,7 @@ const productsDefaultTree: FilterNode = {
   ],
 };
 
-// ---- Small helpers ----------------------------------------------------------
+// ---------- Smart helpers (validation, columns) ------------------------------
 
 function exampleValueFor(type: string): unknown {
   switch (type) {
@@ -117,12 +104,9 @@ function exampleValueFor(type: string): unknown {
   }
 }
 
-/** Validate a schema by probing one condition per field using the core validator. */
 function collectSchemaIssuesWithCore(schema: Schema): string[] {
   const api = createFilterApi(schema);
-  if (schema.operators.length === 0) {
-    return ['No operators available in schema (operator map resolved to empty set).'];
-  }
+  if (schema.operators.length === 0) return ['No operators available in schema (operator map resolved to empty set).'];
   const issues: string[] = [];
   for (const f of schema.fields) {
     const op: OperatorDef = schema.operators.find((o) => o.key === 'eq') ?? schema.operators[0];
@@ -133,83 +117,86 @@ function collectSchemaIssuesWithCore(schema: Schema): string[] {
   return issues;
 }
 
-/** Union of keys across rows → columns for the flexible result table. */
 function unionKeys(rows: Array<Record<string, unknown>>): string[] {
   const keys = new Set<string>();
   for (const r of rows) for (const k of Object.keys(r)) keys.add(k);
   return Array.from(keys);
 }
 
-// ---- App --------------------------------------------------------------------
+// ---------- App (smart) ------------------------------------------------------
 
 export const App: React.FC = () => {
   // Active schema + API
   const [schema, setSchema] = React.useState<Schema>(usersSchema);
   const api = React.useMemo(() => createFilterApi(schema), [schema]);
 
-  // Canonical tree (what <FilterBuilder/> uses)
+  // Canonical filter tree
   const [tree, setTree] = React.useState<FilterNode>(usersDefaultTree);
 
-  // Active dataset (user-editable)
+  // Active dataset
   const [rows, setRows] = React.useState<Array<Record<string, unknown>>>(usersRows);
 
-  // Derivations
+  // Derived
   const decoded = api.decode(tree);
   const encoded = api.encode(decoded);
   const qp = api.toQueryParam(encoded);
   const validation = api.validate(decoded);
 
-  // Evaluate with current schema + rows; catch explicit evaluation errors
+  // Evaluation
   const evaluation = React.useMemo(() => {
-    if (!validation.valid) {
-      return { rows: [] as Array<Record<string, unknown>>, error: null as string | null };
-    }
+    if (!validation.valid) return { rows: [] as Array<Record<string, unknown>>, error: null as string | null };
     try {
-      const out = filterRows(schema, decoded, rows);
-      return { rows: out, error: null as string | null };
+      return { rows: filterRows(schema, decoded, rows), error: null as string | null };
     } catch (e) {
-      if (e instanceof InvalidSchemaOperationError) {
-        return { rows: [] as Array<Record<string, unknown>>, error: e.message };
-      }
-      return { rows: [] as Array<Record<string, unknown>>, error: 'Unexpected evaluation error.' };
+      if (e instanceof InvalidSchemaOperationError) return { rows: [], error: e.message };
+      return { rows: [], error: 'Unexpected evaluation error.' };
     }
   }, [schema, decoded, validation.valid, rows]);
 
-  // Columns: derive from current evaluation (fallback to current rows when empty)
   const columns = React.useMemo(
       () => unionKeys(evaluation.rows.length ? evaluation.rows : rows),
       [evaluation.rows, rows],
   );
 
-  // --- Editors: Fields JSON & Operator Map JSON & Rows JSON ------------------
-
+  // Editors (smart state)
   const [fieldsDraft, setFieldsDraft] = React.useState<string>(() => JSON.stringify(schema.fields, null, 2));
   const [opsDraft, setOpsDraft] = React.useState<string>(() => JSON.stringify(schema.operatorMap, null, 2));
   const [rowsDraft, setRowsDraft] = React.useState<string>(() => JSON.stringify(rows, null, 2));
-
   const [fieldsError, setFieldsError] = React.useState<string | null>(null);
   const [opsError, setOpsError] = React.useState<string | null>(null);
   const [rowsError, setRowsError] = React.useState<string | null>(null);
 
+  const [canonDraft, setCanonDraft] = React.useState<string>(() => JSON.stringify(decoded, null, 2));
+  const [canonError, setCanonError] = React.useState<string | null>(null);
+  const [canonDirty, setCanonDirty] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    setFieldsDraft(JSON.stringify(schema.fields, null, 2));
+    setOpsDraft(JSON.stringify(schema.operatorMap, null, 2));
+  }, [schema]);
+
+  React.useEffect(() => {
+    setRowsDraft(JSON.stringify(rows, null, 2));
+  }, [rows]);
+
+  React.useEffect(() => {
+    if (!canonDirty) {
+      setCanonDraft(JSON.stringify(decoded, null, 2));
+      setCanonError(null);
+    }
+  }, [decoded, canonDirty]);
+
+  // Apply handlers (smart)
   const applyFields = () => {
     try {
       const parsed = JSON.parse(fieldsDraft);
-      if (!Array.isArray(parsed)) {
-        setFieldsError('Fields JSON must be an array.');
-        return;
-      }
+      if (!Array.isArray(parsed)) return setFieldsError('Fields JSON must be an array.');
       let candidate: Schema;
       try {
         candidate = createSchema(parsed as Schema['fields'], schema.operatorMap as OperatorMap);
-      } catch (e) {
-        setFieldsError(e instanceof Error ? e.message : String(e));
-        return;
-      }
+      } catch (e) { return setFieldsError(e instanceof Error ? e.message : String(e)); }
       const issues = collectSchemaIssuesWithCore(candidate);
-      if (issues.length > 0) {
-        setFieldsError(issues.join('\n'));
-        return;
-      }
+      if (issues.length > 0) return setFieldsError(issues.join('\n'));
       setFieldsError(null);
       setSchema(candidate);
       setFieldsDraft(JSON.stringify(candidate.fields, null, 2));
@@ -224,15 +211,9 @@ export const App: React.FC = () => {
       let candidate: Schema;
       try {
         candidate = createSchema(schema.fields, parsed);
-      } catch (e) {
-        setOpsError(e instanceof Error ? e.message : String(e));
-        return;
-      }
+      } catch (e) { return setOpsError(e instanceof Error ? e.message : String(e)); }
       const issues = collectSchemaIssuesWithCore(candidate);
-      if (issues.length > 0) {
-        setOpsError(issues.join('\n'));
-        return;
-      }
+      if (issues.length > 0) return setOpsError(issues.join('\n'));
       setOpsError(null);
       setSchema(candidate);
       setOpsDraft(JSON.stringify(candidate.operatorMap, null, 2));
@@ -244,44 +225,17 @@ export const App: React.FC = () => {
   const applyRows = () => {
     try {
       const parsed = JSON.parse(rowsDraft);
-      if (!Array.isArray(parsed)) {
-        setRowsError('Rows JSON must be an array of objects.');
-        return;
-      }
+      if (!Array.isArray(parsed)) return setRowsError('Rows JSON must be an array of objects.');
       if (!parsed.every((x) => typeof x === 'object' && x !== null)) {
-        setRowsError('Each item in Rows JSON must be an object.');
-        return;
+        return setRowsError('Each item in Rows JSON must be an object.');
       }
       setRowsError(null);
       setRows(parsed as Array<Record<string, unknown>>);
-      setRowsDraft(JSON.stringify(parsed, null, 2)); // normalize formatting
+      setRowsDraft(JSON.stringify(parsed, null, 2));
     } catch (e) {
       setRowsError(e instanceof Error ? e.message : String(e));
     }
   };
-
-  // Keep editors in sync when schema/rows change externally
-  React.useEffect(() => {
-    setFieldsDraft(JSON.stringify(schema.fields, null, 2));
-    setOpsDraft(JSON.stringify(schema.operatorMap, null, 2));
-  }, [schema]);
-  React.useEffect(() => {
-    setRowsDraft(JSON.stringify(rows, null, 2));
-  }, [rows]);
-
-  // --- Canonical JSON (editable) with "dirty" guard --------------------------
-
-  const [canonDraft, setCanonDraft] = React.useState<string>(() => JSON.stringify(decoded, null, 2));
-  const [canonError, setCanonError] = React.useState<string | null>(null);
-  const [canonDirty, setCanonDirty] = React.useState<boolean>(false);
-
-  // Only sync from state → editor when not dirty.
-  React.useEffect(() => {
-    if (!canonDirty) {
-      setCanonDraft(JSON.stringify(decoded, null, 2));
-      setCanonError(null);
-    }
-  }, [decoded, canonDirty]);
 
   const onCanonChange: React.ChangeEventHandler<HTMLTextAreaElement> = (e) => {
     setCanonDirty(true);
@@ -290,15 +244,9 @@ export const App: React.FC = () => {
 
   const applyCanon = () => {
     try {
-      const parsed = JSON.parse(canonDraft) as unknown;
-      const node = parsed as FilterNode;
-
+      const node = JSON.parse(canonDraft) as FilterNode;
       const res = api.validate(node);
-      if (!res.valid) {
-        setCanonError(res.issues.join('\n'));
-        return;
-      }
-
+      if (!res.valid) return setCanonError(res.issues.join('\n'));
       const normalized = api.decode(node);
       setTree(normalized);
       setCanonDraft(JSON.stringify(normalized, null, 2));
@@ -315,34 +263,11 @@ export const App: React.FC = () => {
     setCanonDirty(false);
   };
 
-  // --- Load preset helpers ---------------------------------------------------
-
-  const loadUsersPreset = () => {
-    const nextSchema = usersSchema;
-    const nextRows = usersRows;
-    const nextTree = usersDefaultTree;
-
-    setSchema(nextSchema);
-    setRows(nextRows);
-    setTree(nextTree);
-
-    // Sync editors to new sources
-    setFieldsDraft(JSON.stringify(nextSchema.fields, null, 2));
-    setOpsDraft(JSON.stringify(nextSchema.operatorMap, null, 2));
-    setRowsDraft(JSON.stringify(nextRows, null, 2));
-    setFieldsError(null);
-    setOpsError(null);
-    setRowsError(null);
-
-    // Reset canonical editor (let useEffect repopulate; also clear dirty)
-    setCanonDirty(false);
-    setCanonError(null);
-  };
-
-  const loadProductsPreset = () => {
-    const nextSchema = productsSchema;
-    const nextRows = productsRows;
-    const nextTree = productsDefaultTree;
+  // Presets
+  const loadPreset = (preset: 'users' | 'products') => {
+    const nextSchema = preset === 'users' ? usersSchema : productsSchema;
+    const nextRows   = preset === 'users' ? usersRows   : productsRows;
+    const nextTree   = preset === 'users' ? usersDefaultTree : productsDefaultTree;
 
     setSchema(nextSchema);
     setRows(nextRows);
@@ -351,244 +276,249 @@ export const App: React.FC = () => {
     setFieldsDraft(JSON.stringify(nextSchema.fields, null, 2));
     setOpsDraft(JSON.stringify(nextSchema.operatorMap, null, 2));
     setRowsDraft(JSON.stringify(nextRows, null, 2));
+
     setFieldsError(null);
     setOpsError(null);
     setRowsError(null);
-
     setCanonDirty(false);
     setCanonError(null);
   };
 
-  // ---- UI -------------------------------------------------------------------
+  // -------------------- Request Tester (smart) --------------------------------
+
+  const [reqMethod, setReqMethod] = React.useState<HttpMethod>('GET');
+  const [reqUrl, setReqUrl] = React.useState<string>('');
+  const [reqBodyDraft, setReqBodyDraft] = React.useState<string>(() =>
+      JSON.stringify({ filter: encoded }, null, 2)
+  );
+  const [reqBodyDirty, setReqBodyDirty] = React.useState(false);
+  const [reqLoading, setReqLoading] = React.useState(false);
+  const [reqError, setReqError] = React.useState<string | null>(null);
+  const [reqSuccess, setReqSuccess] = React.useState<string | null>(null);
+
+  // Keep POST body in sync with filter unless user edited it
+  React.useEffect(() => {
+    if (reqMethod === 'POST' && !reqBodyDirty) {
+      setReqBodyDraft(JSON.stringify({ filter: encoded }, null, 2));
+    }
+  }, [encoded, reqMethod, reqBodyDirty]);
+
+  const getUrlPreview = React.useMemo(() => {
+    if (reqMethod !== 'GET' || !reqUrl) return null;
+    try {
+      return api.withFilterInUrl(reqUrl, encoded);
+    } catch {
+      return null;
+    }
+  }, [reqMethod, reqUrl, api, encoded]);
+
+  const resetReqBody = () => {
+    setReqBodyDirty(false);
+    setReqBodyDraft(JSON.stringify({ filter: encoded }, null, 2));
+  };
+
+  const sendRequest = async () => {
+    setReqLoading(true);
+    setReqError(null);
+    setReqSuccess(null);
+    try {
+      let response: Response;
+
+      if (reqMethod === 'GET') {
+        if (!reqUrl) throw new Error('Please enter a URL.');
+        const fullUrl = api.withFilterInUrl(reqUrl, encoded);
+        response = await fetch(fullUrl, { method: 'GET' });
+      } else {
+        if (!reqUrl) throw new Error('Please enter a URL.');
+        let payload: unknown;
+        try {
+          payload = JSON.parse(reqBodyDraft);
+        } catch (e) {
+          throw new Error(`POST body is not valid JSON: ${(e as Error).message}`);
+        }
+        response = await fetch(reqUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`HTTP ${response.status} ${response.statusText}${text ? ` – ${text}` : ''}`);
+      }
+
+      const data = await response.json();
+
+      // Normalize to array of objects for our rows
+      let nextRows: Array<Record<string, unknown>>;
+      if (Array.isArray(data)) {
+        nextRows = data as Array<Record<string, unknown>>;
+      } else if (Array.isArray((data as any).data)) {
+        nextRows = (data as any).data;
+      } else if (Array.isArray((data as any).items)) {
+        nextRows = (data as any).items;
+      } else {
+        // last resort: wrap object into array
+        nextRows = [data as Record<string, unknown>];
+      }
+
+      if (!nextRows.every((x) => typeof x === 'object' && x !== null)) {
+        throw new Error('Response JSON is not an array of objects.');
+      }
+
+      setRows(nextRows);
+      setReqSuccess(`Loaded ${nextRows.length} row(s) from server.`);
+    } catch (e) {
+      setReqError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReqLoading(false);
+    }
+  };
+
+  // ---------------------- UI (dumb components wired) -------------------------
 
   return (
-      <div className="mx-auto max-w-6xl p-4 space-y-6">
-        <h1 className="text-2xl font-semibold">Filter Builder (Demo)</h1>
+      <div className="mx-auto max-w-6xl p-4 space-y-6" data-test-id="app-root">
+        <h1 className="text-2xl font-semibold" aria-label="Filter Builder Demo">Filter Builder (Demo)</h1>
 
-        {/* Schema Config: Fields + Operator Map + Rows */}
+        {/* Request Tester */}
+        <RequestTester
+            method={reqMethod}
+            onMethodChange={(m) => { setReqMethod(m); if (m === 'POST' && !reqBodyDirty) resetReqBody(); }}
+            url={reqUrl}
+            onUrlChange={setReqUrl}
+            body={reqBodyDraft}
+            onBodyChange={(s) => { setReqBodyDirty(true); setReqBodyDraft(s); }}
+            isBodyDirty={reqBodyDirty}
+            onResetBody={resetReqBody}
+            onSend={sendRequest}
+            loading={reqLoading}
+            error={reqError}
+            success={reqSuccess}
+            getUrlPreview={getUrlPreview}
+            testId="request-tester"
+        />
+
+        {/* Schema Config: Rows + Fields + Operator Map */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <JsonEditorCard
+              title="Rows JSON"
+              value={rowsDraft}
+              onChange={setRowsDraft}
+              onApply={applyRows}
+              error={rowsError}
+              okLabel="Rows OK"
+              testId="rows-editor"
+              extraActionsLeft={
+                <>
+                  <span className="text-[10px] text-gray-500 mr-1" aria-hidden>Presets:</span>
+                  <button
+                      type="button"
+                      onClick={() => loadPreset('users')}
+                      className="rounded-md border px-2 py-1 text-[11px] hover:bg-gray-50"
+                      aria-label="Load Users preset (schema + rows + filter)"
+                      data-test-id="btn-preset-users"
+                  >
+                    Users
+                  </button>
+                  <button
+                      type="button"
+                      onClick={() => loadPreset('products')}
+                      className="rounded-md border px-2 py-1 text-[11px] hover:bg-gray-50"
+                      aria-label="Load Products preset (schema + rows + filter)"
+                      data-test-id="btn-preset-products"
+                  >
+                    Products
+                  </button>
+                </>
+              }
+          />
 
-          {/* Rows JSON (dataset) */}
-          <div className="rounded-lg border bg-white p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold">Rows JSON</h2>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-gray-500 mr-1">Presets:</span>
-                <button
-                    type="button"
-                    onClick={loadUsersPreset}
-                    className="rounded-md border px-2 py-1 text-[11px] hover:bg-gray-50"
-                    aria-label="Load users preset"
-                    title="Load users preset (schema + rows + default filter)"
-                >
-                  Users
-                </button>
-                <button
-                    type="button"
-                    onClick={loadProductsPreset}
-                    className="rounded-md border px-2 py-1 text-[11px] hover:bg-gray-50"
-                    aria-label="Load products preset"
-                    title="Load products preset (schema + rows + default filter)"
-                >
-                  Products
-                </button>
-                <button
-                    type="button"
-                    onClick={applyRows}
-                    className="rounded-md border px-2 py-1 text-xs bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500 ml-2"
-                    aria-label="Apply rows JSON"
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-            <textarea
-                className="w-full h-64 rounded-md border border-gray-300 px-2 py-1 text-xs font-mono"
-                aria-label="Rows JSON editor"
-                value={rowsDraft}
-                onChange={(e) => setRowsDraft(e.target.value)}
-                spellCheck={false}
-            />
-            {rowsError ? (
-                <p className="mt-2 text-xs text-red-700 whitespace-pre-wrap">{rowsError}</p>
-            ) : (
-                <p className="mt-2 text-xs text-green-700">Rows OK</p>
-            )}
-          </div>
-          {/* Fields JSON */}
-          <div className="rounded-lg border bg-white p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold">Fields JSON</h2>
-              <button
-                  type="button"
-                  onClick={applyFields}
-                  className="rounded-md border px-2 py-1 text-xs bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500"
-                  aria-label="Apply fields JSON"
-              >
-                Apply
-              </button>
-            </div>
-            <textarea
-                className="w-full h-64 rounded-md border border-gray-300 px-2 py-1 text-xs font-mono"
-                aria-label="Fields JSON editor"
-                value={fieldsDraft}
-                onChange={(e) => setFieldsDraft(e.target.value)}
-                spellCheck={false}
-            />
-            {fieldsError ? (
-                <p className="mt-2 text-xs text-red-700 whitespace-pre-wrap">{fieldsError}</p>
-            ) : (
-                <p className="mt-2 text-xs text-green-700">Schema fields OK</p>
-            )}
-          </div>
+          <JsonEditorCard
+              title="Fields JSON"
+              value={fieldsDraft}
+              onChange={setFieldsDraft}
+              onApply={applyFields}
+              error={fieldsError}
+              okLabel="Schema fields OK"
+              testId="fields-editor"
+          />
 
-          {/* Operator Map JSON */}
-          <div className="rounded-lg border bg-white p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold">Operator Map JSON</h2>
-              <button
-                  type="button"
-                  onClick={applyOps}
-                  className="rounded-md border px-2 py-1 text-xs bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500"
-                  aria-label="Apply operator map JSON"
-              >
-                Apply
-              </button>
-            </div>
-            <textarea
-                className="w-full h-64 rounded-md border border-gray-300 px-2 py-1 text-xs font-mono"
-                aria-label="Operator Map JSON editor"
-                value={opsDraft}
-                onChange={(e) => setOpsDraft(e.target.value)}
-                spellCheck={false}
-            />
-            {opsError ? (
-                <p className="mt-2 text-xs text-red-700 whitespace-pre-wrap">{opsError}</p>
-            ) : (
-                <p className="mt-2 text-xs text-green-700">Operator map OK</p>
-            )}
-          </div>
-
+          <JsonEditorCard
+              title="Operator Map JSON"
+              value={opsDraft}
+              onChange={setOpsDraft}
+              onApply={applyOps}
+              error={opsError}
+              okLabel="Operator map OK"
+              testId="ops-editor"
+          />
         </section>
 
         {/* Filter Builder + Diagnostics */}
         <section className="space-y-3">
-          <FilterBuilder
-              schema={schema}
-              value={decoded}
-              onChange={setTree}
-              className="bg-white rounded-lg border p-4"
-          />
+          <div data-test-id="filter-builder" aria-label="Filter builder">
+            <FilterBuilder
+                schema={schema}
+                value={decoded}
+                onChange={setTree}
+                className="bg-white rounded-lg border p-4"
+            />
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Canonical JSON (editable) */}
-            <div className="rounded-lg border bg-white p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-semibold">Canonical JSON (editable)</h2>
-                <div className="flex gap-2">
-                  {canonDirty && (
-                      <span className="text-xs text-amber-700 self-center">
-                    Edited — press <strong>Apply</strong> to see changes
-                  </span>
-                  )}
-                  <button
-                      type="button"
-                      onClick={resetCanon}
-                      className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                      aria-label="Reset canonical JSON editor"
-                  >
-                    Reset
-                  </button>
-                  <button
-                      type="button"
-                      onClick={applyCanon}
-                      className="rounded-md border px-2 py-1 text-xs bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500"
-                      aria-label="Apply canonical JSON"
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
-              <textarea
-                  className="w-full h-64 rounded-md border border-gray-300 px-2 py-1 text-xs font-mono"
-                  aria-label="Canonical JSON editor"
-                  value={canonDraft}
-                  onChange={onCanonChange}
-                  spellCheck={false}
-              />
-              {canonError ? (
-                  <p className="mt-2 text-xs text-red-700 whitespace-pre-wrap">{canonError}</p>
-              ) : (
-                  <p className="mt-2 text-xs text-green-700">
-                    {canonDirty ? 'Draft has un-applied edits' : 'Filter JSON OK'}
-                  </p>
-              )}
-            </div>
+            <JsonEditorCard
+                title="Canonical JSON (editable)"
+                value={canonDraft}
+                onChange={onCanonChange}
+                onApply={applyCanon}
+                onReset={resetCanon}
+                error={canonError}
+                okLabel="Filter JSON OK"
+                dirtyHint="Edited — press Apply to see changes"
+                isDirty={canonDirty}
+                testId="canonical-editor"
+            />
 
-            {/* Target JSON */}
-            <div className="rounded-lg border bg-white p-3">
-              <h2 className="text-sm font-semibold mb-2">Target JSON</h2>
-              <pre className="text-xs overflow-auto">{JSON.stringify(encoded, null, 2)}</pre>
-            </div>
+            <Card title="Target JSON" data-test-id="target-json" ariaLabel="Target JSON">
+            <pre className="text-xs overflow-auto" aria-label="Target JSON pre">
+              {JSON.stringify(encoded, null, 2)}
+            </pre>
+            </Card>
 
-            {/* Query param + validation */}
-            <div className="rounded-lg border bg-white p-3">
-              <h2 className="text-sm font-semibold mb-2">GET Query Param</h2>
-              <code className="break-words text-xs">{qp}</code>
-              <div className="mt-2 text-xs">
-              <span className={validation.valid ? 'text-green-700' : 'text-red-700'}>
+            <Card title="GET Query Param" data-test-id="query-param" ariaLabel="GET Query Param">
+              <code className="break-words text-xs" aria-label="Query parameter">{qp}</code>
+              <div className="mt-2 text-xs" aria-live="polite">
+              <span
+                  className={validation.valid ? 'text-green-700' : 'text-red-700'}
+                  data-test-id="validation-summary"
+                  aria-label={validation.valid ? 'Filter valid' : 'Filter invalid'}
+              >
                 {validation.valid ? 'Valid' : 'Invalid'} ({validation.issues.length} issues)
               </span>
                 {!validation.valid && (
-                    <ul className="list-disc ml-5 mt-1">
+                    <ul className="list-disc ml-5 mt-1" data-test-id="validation-issues">
                       {validation.issues.map((i, idx) => <li key={idx}>{i}</li>)}
                     </ul>
                 )}
               </div>
-            </div>
+            </Card>
           </div>
         </section>
 
-        {/* Filtered results (flexible columns) */}
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Filtered Results</h2>
-          <div className="overflow-x-auto rounded-lg border bg-white">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 text-gray-700">
-              <tr>
-                {columns.map((k) => (
-                    <th key={k} className="px-3 py-2 text-left font-medium">{k}</th>
-                ))}
-              </tr>
-              </thead>
-              <tbody>
-              {evaluation.rows.map((row, rIdx) => (
-                  <tr key={rIdx} className="border-t">
-                    {columns.map((k) => (
-                        <td key={k} className="px-3 py-1">{String(row[k] ?? '')}</td>
-                    ))}
-                  </tr>
-              ))}
-              {(!validation.valid || evaluation.error) && (
-                  <tr className="border-t">
-                    <td className="px-3 py-2 text-xs text-amber-700" colSpan={columns.length}>
-                      {!validation.valid
-                          ? 'Results hidden because current filter is invalid.'
-                          : evaluation.error}
-                    </td>
-                  </tr>
-              )}
-              {validation.valid && !evaluation.error && evaluation.rows.length === 0 && (
-                  <tr className="border-t">
-                    <td className="px-3 py-2 text-xs text-gray-500" colSpan={columns.length}>
-                      No rows match the current filter.
-                    </td>
-                  </tr>
-              )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        {/* Filtered results */}
+        <ResultsTable
+            title="Filtered Results"
+            rows={evaluation.rows}
+            columns={columns}
+            validationMessage={
+              !validation.valid
+                  ? 'Results hidden because current filter is invalid.'
+                  : evaluation.error
+            }
+            testId="results"
+        />
       </div>
   );
 };
