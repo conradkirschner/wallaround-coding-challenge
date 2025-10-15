@@ -8,10 +8,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
+    "lib": ["ES2022", "DOM"],
     "paths": {
       "filter-builder-react": ["./src/index.ts"],
       "filter-builder-core": ["../filter-builder-core/src/index.ts"]
@@ -25,11 +22,7 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
-    "types": [
-      "vite/client"
-    ]
+    "types": ["vite/client"]
   },
-  "include": [
-    "**/*",
-  ]
+  "include": ["**/*"]
 }

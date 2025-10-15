@@ -12,7 +12,7 @@ describe('<JsonEditorCard />', () => {
         onApply={onApply}
         okLabel="OK"
         testId="json-card"
-      />
+      />,
     );
     cy.getByTestId('json-card').contains('button', 'Apply').click();
     cy.get('@onApply').should('have.been.called');

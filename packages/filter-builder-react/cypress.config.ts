@@ -27,19 +27,24 @@ export default defineConfig({
         root: process.cwd(),
         plugins: [
           react(),
-          istanbul({
-            cypress: true,
-            requireEnv: false,
-            include: ['src/**/*', 'examples/**/*'],
-            exclude: ['node_modules', 'cypress', 'dist', 'coverage'],
-            extension: ['.ts', '.tsx', '.js', '.jsx'],
-          }),
+          coverageEnabled
+            ? istanbul({
+                cypress: true,
+                requireEnv: false,
+                include: ['src/**/*', 'examples/**/*'],
+                exclude: ['node_modules', 'cypress', 'dist', 'coverage'],
+                extension: ['.ts', '.tsx', '.js', '.jsx'],
+              })
+            : undefined,
         ],
         resolve: {
           alias: {
             // use source during CT
             'filter-builder-react': path.resolve(process.cwd(), 'src/index.ts'),
-            'filter-builder-core': path.resolve(process.cwd(), '../filter-builder-core/src/index.ts'),
+            'filter-builder-core': path.resolve(
+              process.cwd(),
+              '../filter-builder-core/src/index.ts',
+            ),
           },
           preserveSymlinks: true,
         },

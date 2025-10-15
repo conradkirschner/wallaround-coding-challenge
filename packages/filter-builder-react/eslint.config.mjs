@@ -1,77 +1,115 @@
-// eslint.config.mjs
-import tsParser from "@typescript-eslint/parser";
-import tsPlugin from "@typescript-eslint/eslint-plugin";
-import reactPlugin from "eslint-plugin-react";
-import reactHooks from "eslint-plugin-react-hooks";
-import prettierPlugin from "eslint-plugin-prettier";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import js from '@eslint/js';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import prettier from 'eslint-plugin-prettier';
 
-const IGNORE = [
-  "dist/**",
-  "coverage/**",
-  "node_modules/**",
-  "examples/dev/dist/**",
-];
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectTsconfig = path.join(__dirname, 'tsconfig.eslint.json');
 
-export default [
+export default tseslint.config(
+  // Ignores
   {
-    ignores: IGNORE,
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+      '**/*.d.ts',
+      'cypress/screenshots*/**',
+      'cypress/videos*/**',
+      'cypress/downloads*/**',
+    ],
   },
-  // Source (TypeScript, type-aware)
+
+  // Base TS/React config
   {
-    files: ["src/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
-      parser: tsParser,
+      parser: tseslint.parser,
       parserOptions: {
-        project: ["./tsconfig.json"], // make sure this exists at repo root
-        tsconfigRootDir: new URL(".", import.meta.url).pathname,
-        ecmaVersion: "latest",
-        sourceType: "module",
+        project: [projectTsconfig],
+        tsconfigRootDir: __dirname,
+        ecmaVersion: 'latest',
+        sourceType: 'module',
         ecmaFeatures: { jsx: true },
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
       },
     },
     plugins: {
-      "@typescript-eslint": tsPlugin,
+      '@typescript-eslint': tseslint.plugin,
       react: reactPlugin,
-      "react-hooks": reactHooks,
-      prettier: prettierPlugin,
+      'react-hooks': reactHooks,
+      prettier,
     },
     settings: {
-      react: { version: "detect" },
+      react: { version: 'detect' },
     },
+    // Start from JS recommended, then add our rules
     rules: {
-      // TypeScript
-      ...tsPlugin.configs["recommended-type-checked"]?.rules,
-      "@typescript-eslint/consistent-type-imports": ["warn", { prefer: "type-imports" }],
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-      "@typescript-eslint/no-floating-promises": "error",
+      ...js.configs.recommended.rules,
 
-      // React
-      ...reactPlugin.configs.recommended.rules,
-      "react/react-in-jsx-scope": "off",
-      "react/prop-types": "off",
+      // React modern JSX
+      'react/react-in-jsx-scope': 'off',
+      'react/jsx-uses-react': 'off',
 
-      // React Hooks (define explicitly to avoid plugin config mismatch)
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
+      // Hooks
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
 
       // Prettier
-      "prettier/prettier": "warn",
+      'prettier/prettier': 'error',
+
+      // Relax noisy TS rules so you can iterate
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-redundant-type-constituents': 'off',
+      '@typescript-eslint/no-base-to-string': 'off',
+      '@typescript-eslint/no-explicit-any': ['warn', { ignoreRestArgs: true }],
     },
   },
 
-  // Cypress (separate TS project, not type-aware to keep it fast)
+  // Cypress overrides (define cy/Cypress globals)
   {
-    files: ["cypress/**/*.{ts,tsx}"],
+    files: ['cypress/**/*.{ts,tsx}', 'cypress.config.ts'],
     languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        project: ["./tsconfig.cypress.json"],
-        tsconfigRootDir: new URL(".", import.meta.url).pathname,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        cy: 'readonly',
+        Cypress: 'readonly',
+        expect: 'readonly',
       },
     },
-    plugins: { prettier: prettierPlugin },
-    rules: {
-      "prettier/prettier": "warn",
+  },
+
+  // Node-ish config files
+  {
+    files: ['vite.config.ts', 'examples/dev/vite.config.ts', '*.config.{ts,js,cjs,mjs}'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
-];
+
+  // Example app: keep lenient TS safety
+  {
+    files: ['examples/dev/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-redundant-type-constituents': 'off',
+      '@typescript-eslint/no-base-to-string': 'off',
+    },
+  },
+);

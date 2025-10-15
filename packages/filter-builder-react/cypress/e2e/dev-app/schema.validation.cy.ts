@@ -3,13 +3,13 @@ describe('Schema editing & validation', () => {
     cy.visit('/');
 
     const invalidFields = [
-      { "key": "id", "label": "ID", "type": "x" } // invalid type
+      { key: 'id', label: 'ID', type: 'x' }, // invalid type
     ];
 
-    cy.getByTestId('fields-editor').find('textarea').clear({ force: true }).type(
-      JSON.stringify(invalidFields, null, 2),
-      { parseSpecialCharSequences: false }
-    );
+    cy.getByTestId('fields-editor')
+      .find('textarea')
+      .clear({ force: true })
+      .type(JSON.stringify(invalidFields, null, 2), { parseSpecialCharSequences: false });
 
     cy.getByTestId('fields-editor').contains('button', 'Apply').click();
 

@@ -9,5 +9,5 @@ export default defineConfig({
   target: 'es2020',
   splitting: false,
   treeshake: true,
-  minify: false
+  minify: false,
 });

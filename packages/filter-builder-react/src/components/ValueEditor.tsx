@@ -6,27 +6,27 @@ import { NoValuePill, OneValue, TwoValue, ManyValue } from './value/ui';
 
 export type ValueEditorProps = {
   id?: string;
-  schema: Schema;     // not used directly today, kept for future-proofing/custom inputs
+  schema: Schema; // not used directly today, kept for future-proofing/custom inputs
   field: Field;
   operator: OperatorDef;
   value: unknown;
   onChange: (next: unknown) => void;
-  inputs?: PartialRegistryMap;  // Partial<ValueInputRegistry>
+  inputs?: PartialRegistryMap; // Partial<ValueInputRegistry>
   className?: string;
   testId?: string;
 };
 
 export const ValueEditor: React.FC<ValueEditorProps> = React.memo(function ValueEditor({
-                                                                                         id,
-                                                                                         schema, // eslint-disable-line @typescript-eslint/no-unused-vars
-                                                                                         field,
-                                                                                         operator,
-                                                                                         value,
-                                                                                         onChange,
-                                                                                         inputs,
-                                                                                         className,
-                                                                                         testId = 'value-editor',
-                                                                                       }) {
+  id,
+  schema,
+  field,
+  operator,
+  value,
+  onChange,
+  inputs,
+  className,
+  testId = 'value-editor',
+}) {
   const model = useValueEditor({ id, field, operator, value, onChange, inputs });
 
   if (model.arity === 'none') {
@@ -34,10 +34,10 @@ export const ValueEditor: React.FC<ValueEditorProps> = React.memo(function Value
   }
 
   return (
-      <div className={className} data-test-id={testId}>
-        {model.arity === 'one' && <OneValue h={model.handlers} testId={`${testId}-one`} />}
-        {model.arity === 'two' && <TwoValue h={model.handlers} testId={`${testId}-two`} />}
-        {model.arity === 'many' && <ManyValue h={model.handlers} testId={`${testId}-many`} />}
-      </div>
+    <div className={className} data-test-id={testId}>
+      {model.arity === 'one' && <OneValue h={model.handlers} testId={`${testId}-one`} />}
+      {model.arity === 'two' && <TwoValue h={model.handlers} testId={`${testId}-two`} />}
+      {model.arity === 'many' && <ManyValue h={model.handlers} testId={`${testId}-many`} />}
+    </div>
   );
 });

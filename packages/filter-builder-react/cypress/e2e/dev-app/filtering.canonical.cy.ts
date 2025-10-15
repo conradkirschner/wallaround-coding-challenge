@@ -6,10 +6,9 @@ describe('Canonical JSON editing', () => {
     cy.getByTestId('canonical-editor')
       .find('textarea')
       .clear({ force: true })
-      .type(
-        JSON.stringify({ field: 'role', operator: 'eq', value: 'admin' }, null, 2),
-        { parseSpecialCharSequences: false }
-      );
+      .type(JSON.stringify({ field: 'role', operator: 'eq', value: 'admin' }, null, 2), {
+        parseSpecialCharSequences: false,
+      });
 
     cy.getByTestId('canonical-editor').contains('button', 'Apply').click();
 

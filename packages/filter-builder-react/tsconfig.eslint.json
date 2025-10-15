@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "examples/dev/src",
+    "cypress/**/*.ts",
+    "cypress/**/*.tsx",
+    "cypress.config.ts",
+    "vite.config.ts",
+    "examples/dev/vite.config.ts"
+  ]
+}

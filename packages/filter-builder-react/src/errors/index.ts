@@ -1,1 +1,1 @@
-export {NoOperationError} from './NoOperationError';
+export { NoOperationError } from './NoOperationError';

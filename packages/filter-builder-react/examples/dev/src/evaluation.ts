@@ -40,10 +40,14 @@ function coerceToType(value: unknown, type: 'string' | 'number' | 'boolean' | 'd
 const isNullishish = (v: Scalar) => v === undefined || v === null || v === '';
 const cmpNumber = (a: number, b: number) => (a === b ? 0 : a < b ? -1 : 1);
 const cmpDate = (a: Date, b: Date) =>
-    a.getTime() === b.getTime() ? 0 : a.getTime() < b.getTime() ? -1 : 1;
+  a.getTime() === b.getTime() ? 0 : a.getTime() < b.getTime() ? -1 : 1;
 
 /** Evaluate a single condition against a row using the schema to coerce types. */
-function evaluateCondition(schema: Schema, row: Record<string, unknown>, c: ConditionNode): boolean {
+function evaluateCondition(
+  schema: Schema,
+  row: Record<string, unknown>,
+  c: ConditionNode,
+): boolean {
   const field = schema.fields.find((f) => f.key === c.field);
   if (!field) return false; // unknown field → fail closed
 
@@ -100,8 +104,8 @@ function evaluateCondition(schema: Schema, row: Record<string, unknown>, c: Cond
       const arr = rhs;
       if (!Array.isArray(arr)) return false;
       const coerced = arr
-          .map((v) => coerceToType(v, field.type))
-          .filter((v): v is Exclude<Scalar, undefined> => v !== undefined);
+        .map((v) => coerceToType(v, field.type))
+        .filter((v): v is Exclude<Scalar, undefined> => v !== undefined);
       return coerced.some((v) => v === left);
     }
     case 'between': {
@@ -111,7 +115,8 @@ function evaluateCondition(schema: Schema, row: Record<string, unknown>, c: Cond
       if (field.type === 'number') {
         const a = coerceToType(arr[0], 'number');
         const b = coerceToType(arr[1], 'number');
-        if (typeof left !== 'number' || typeof a !== 'number' || typeof b !== 'number') return false;
+        if (typeof left !== 'number' || typeof a !== 'number' || typeof b !== 'number')
+          return false;
         const lo = Math.min(a, b);
         const hi = Math.max(a, b);
         return left >= lo && left <= hi;
@@ -138,17 +143,17 @@ function evaluateCondition(schema: Schema, row: Record<string, unknown>, c: Cond
     default:
       // Make invalid/unknown ops very explicit for the app to catch and show nicely.
       throw new InvalidSchemaOperationError(
-          c.operator,
-          `Unknown or unsupported operator '${c.operator}' at field '${c.field}'`
+        c.operator,
+        `Unknown or unsupported operator '${c.operator}' at field '${c.field}'`,
       );
   }
 }
 
 /** Recursively evaluate a filter tree (canonical) against a row. */
 export function evaluateRow(
-    schema: Schema,
-    node: FilterNode,
-    row: Record<string, unknown>
+  schema: Schema,
+  node: FilterNode,
+  row: Record<string, unknown>,
 ): boolean {
   if ('field' in node) return evaluateCondition(schema, row, node);
   if ('and' in node) return node.and.every((n) => evaluateRow(schema, n, row));
@@ -157,9 +162,9 @@ export function evaluateRow(
 
 /** Convenience: filter an array of rows. */
 export function filterRows<T extends Record<string, unknown>>(
-    schema: Schema,
-    node: FilterNode,
-    rows: ReadonlyArray<T>
+  schema: Schema,
+  node: FilterNode,
+  rows: ReadonlyArray<T>,
 ): T[] {
   return rows.filter((r) => evaluateRow(schema, node, r));
 }

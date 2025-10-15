@@ -30,7 +30,9 @@ describe('Request tester', () => {
       cy.getByTestId('request-tester__url').clear().type('/api/mock');
 
       // optional: reset body if UI exposes the reset button
-      cy.contains('button', /Reset Body/i).click({ force: true }).then(() => {});
+      cy.contains('button', /Reset Body/i)
+        .click({ force: true })
+        .then(() => {});
 
       cy.contains('button', 'Send').click();
     });

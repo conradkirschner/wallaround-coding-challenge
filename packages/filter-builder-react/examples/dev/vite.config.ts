@@ -9,7 +9,7 @@ export default defineConfig({
   root: path.resolve(__dirname, '.'),
   plugins: [
     react(),
-    (istanbul({
+    istanbul({
       cypress: true,
       requireEnv: false,
       include: ['src/**/*', 'dev/**/*', 'examples/**/*'],
@@ -17,7 +17,7 @@ export default defineConfig({
       extension: ['.ts', '.tsx', '.js', '.jsx'],
       // @ts-expect-error plugin supports this at runtime
       enabled: coverageEnabled,
-    }) as unknown) as PluginOption,
+    }) as unknown as PluginOption,
   ],
   resolve: {
     alias: {
