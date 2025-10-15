@@ -34,12 +34,17 @@ export function firstCondition(schema: Schema): ConditionNode {
   if (schema.fields.length === 0) {
     throw new Error('Schema must include at least one field.');
   }
+
+  // Element type of OperatorDef.supportedTypes
+  type ValueType = OperatorDef['supportedTypes'][number];
+
   for (const f of schema.fields) {
-    const op: OperatorDef | undefined = schema.operators.find(
-      (o: { supportedTypes: string | any[] }) => o.supportedTypes.includes(f.type),
-    );
+    // Let TS infer OperatorDef for `o`, and cast `f.type` to the exact element type if needed
+    const op = schema.operators.find((o) => o.supportedTypes.includes(f.type as ValueType));
+
     if (op) return { field: f.key, operator: op.key };
   }
+
   // If we reach here, no operator supports any field type
   throw new NoOperationError(schema.fields);
 }

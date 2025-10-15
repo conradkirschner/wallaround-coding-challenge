@@ -5,7 +5,7 @@ export type GroupToolbarProps = {
   kind: GroupKind;
   labelId: string;
   onToggleKind: () => void;
-  onRemove?:  (() => void) | undefined;
+  onRemove?: (() => void) | undefined;
   testId?: string | undefined;
 };
 

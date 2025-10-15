@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { Schema, Field, OperatorDef } from 'filter-builder-core';
-import type { ConditionNode } from './helpers';
 import { findField, getCompatibleOperators, normalizeValueForArity } from './helpers';
+import type { ConditionNode } from './helpers';
 
 export type UseConditionNodeArgs = {
   node: ConditionNode;
@@ -21,6 +21,12 @@ export type UseConditionNodeResult = {
   onValueChange: (nextVal: unknown) => void;
 };
 
+// Helper: tell TS this array is non-empty (throws otherwise)
+function requireFirst<T>(arr: readonly T[]): T {
+  if (arr.length === 0) throw new Error('Expected non-empty array');
+  return arr[0]!;
+}
+
 export function useConditionNode({
   node,
   schema,
@@ -31,7 +37,7 @@ export function useConditionNode({
 
   const resolvedField = React.useMemo(() => {
     if (hasNoFields) return null;
-    return findField(fields, node.field) ?? fields[0];
+    return findField(fields, node.field) ?? requireFirst(fields);
   }, [fields, node.field, hasNoFields]);
 
   const compatibleOps = React.useMemo(() => {
@@ -43,7 +49,7 @@ export function useConditionNode({
 
   const currentOp = React.useMemo(() => {
     if (!resolvedField || compatibleOps.length === 0) return null;
-    return compatibleOps.find((o) => o.key === node.operator) ?? compatibleOps[0];
+    return compatibleOps.find((o) => o.key === node.operator) ?? requireFirst(compatibleOps);
   }, [resolvedField, compatibleOps, node.operator]);
 
   React.useEffect(() => {
@@ -62,9 +68,12 @@ export function useConditionNode({
   const onFieldChange = React.useCallback(
     (fieldKey: string) => {
       if (hasNoFields) return;
-      const nextField = findField(fields, fieldKey) ?? fields[0];
+
+      const nextField = findField(fields, fieldKey) ?? requireFirst(fields);
       const nextOps = getCompatibleOperators(schema.operators, nextField.type);
-      const nextOp = nextOps[0]; // safe: if no ops, guard will render and this handler shouldn't be used
+      if (nextOps.length === 0) return; // nothing compatible; leave as-is
+
+      const nextOp = requireFirst(nextOps);
       onChange({
         field: nextField.key,
         operator: nextOp.key,
