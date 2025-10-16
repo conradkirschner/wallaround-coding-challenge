@@ -7,6 +7,7 @@ const coverageEnabled = process.env.VITE_COVERAGE === 'true';
 
 export default defineConfig({
   root: path.resolve(__dirname, '.'),
+  base: 'https://conradkirschner.github.io/wallaround-coding-challenge/',
   plugins: [
     react(),
     istanbul({
