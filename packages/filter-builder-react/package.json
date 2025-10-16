@@ -74,7 +74,9 @@
     "ct:open": "cypress open --component",
     "test:ct": "cross-env VITE_COVERAGE=true cypress run --component",
     "test": "npm run test:ct && npm run test:e2e",
-    "test:coverage": "npm run test:ct && npm run test:e2e:examples:coverage && nyc report --reporter=text-summary --reporter=lcov --report-dir coverage/cypress"
+    "test:coverage": "npm run test:ct && npm run test:e2e:examples:coverage && nyc report --reporter=text-summary --reporter=lcov --report-dir coverage/cypress",
+    "release:gh:page": "vite build examples/dev"
+
   },
   "nyc": {
     "reporter": [

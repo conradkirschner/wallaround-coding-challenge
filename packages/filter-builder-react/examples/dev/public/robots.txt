@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://conradkirschner.github.io/REPO_NAME/sitemap.xml

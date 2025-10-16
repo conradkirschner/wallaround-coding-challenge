@@ -1,12 +1,137 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Filter Builder Demo</title>
-  </head>
-  <body class="bg-gray-50">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta http-equiv="x-ua-compatible" content="IE=edge" />
+
+  <title>Filter Builder Demo – Coding-Challenge (wallaround.de) | Conrad Kirschner</title>
+  <meta
+          name="description"
+          content="React/TypeScript-Demo aus einer Coding-Challenge für wallaround.de. Eigenständige Arbeit, in ca. 10 Stunden umgesetzt, nicht für den produktiven Einsatz. Portfolio von Conrad Kirschner."
+  />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" />
+  <link rel="canonical" href="https://conradkirschner.github.io/wallaround-coding-challenge/" />
+  <link rel="me" href="https://github.com/conradkirschner/" />
+
+  <!-- Icons -->
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+
+  <!-- Social preview (provide /og-image.png at ~1200x630) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Filter Builder Demo – Coding-Challenge (wallaround.de)" />
+  <meta property="og:description" content="Eigenständige React/TypeScript-Demo. ~10 Stunden Arbeit, nicht produktionsreif. Von Conrad Kirschner." />
+  <meta property="og:url" content="https://conradkirschner.github.io/wallaround-coding-challenge/" />
+  <meta property="og:site_name" content="Conrad Kirschner – Portfolio" />
+  <meta property="og:locale" content="de_DE" />
+  <meta property="og:image" content="https://conradkirschner.github.io/wallaround-coding-challenge/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Filter Builder Demo – Coding-Challenge (wallaround.de)" />
+  <meta name="twitter:description" content="React/TypeScript-Demo (wallaround.de-Kontext). ~10 Std, nicht produktionsreif. Von Conrad Kirschner." />
+  <meta name="twitter:image" content="https://conradkirschner.github.io/wallaround-coding-challenge/og-image.png" />
+
+  <!-- Preload (optional): provide your main font if used) -->
+  <!-- <link rel="preload" href="/fonts/Inter-Variable.woff2" as="font" type="font/woff2" crossorigin> -->
+
+  <!-- JSON-LD: WebSite + potential Sitelinks (safe even without site search) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "url": "https://conradkirschner.github.io/wallaround-coding-challenge/",
+      "name": "Filter Builder Demo – Coding-Challenge (wallaround.de) | Conrad Kirschner",
+      "inLanguage": "de",
+      "publisher": {
+        "@type": "Person",
+        "name": "Conrad Magnus Kirschner",
+        "url": "https://github.com/conradkirschner/",
+        "sameAs": ["https://github.com/conradkirschner/"]
+      }
+    }
+  </script>
+
+  <!-- JSON-LD: CreativeWork (project) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CreativeWork",
+      "name": "Filter Builder Demo – Coding-Challenge (wallaround.de)",
+      "inLanguage": "de",
+      "description": "Eigenständige React/TypeScript-Demo: entstanden aus einer Coding-Challenge im Rahmen eines Bewerbungsprozesses bei wallaround.de. In ca. 10 Stunden umgesetzt, nicht für den produktiven Einsatz bestimmt.",
+      "keywords": "Wallaround, wallaround.de, Coding Challenge, Filter, Filter Builder, React, TypeScript, Demo, Bewerbungsprozess, Vorstellungsgespräch, Portfolio",
+      "timeRequired": "PT10H",
+      "isAccessibleForFree": true,
+      "author": {
+        "@type": "Person",
+        "name": "Conrad Magnus Kirschner",
+        "url": "https://github.com/conradkirschner/"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "url": "https://conradkirschner.github.io/wallaround-coding-challenge/"
+      }
+    }
+  </script>
+
+  <!-- JSON-LD: FAQPage (reinforces key statements) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Besteht eine Verbindung zu wallaround.de?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Nein. Unabhängiges Portfolio-Projekt basierend auf einer Coding-Challenge aus einem Bewerbungsprozess. Keine Beauftragung, Kooperation oder geschäftliche Verbindung zu wallaround.de."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Wie viel Zeit wurde investiert?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Die Arbeit entstand unter Zeitdruck in ca. 10 Stunden."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Ist die Demo produktionsreif?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Nein. Die Demo ist nicht für den produktiven Einsatz vorgesehen."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Wo finde ich weitere Arbeiten?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Auf GitHub: https://github.com/conradkirschner/."
+          }
+        }
+      ]
+    }
+  </script>
+</head>
+<body class="bg-gray-50">
+<noscript>
+  <main style="max-width:72rem;margin:1rem auto;padding:1rem;border:1px solid #e5e7eb;background:#fffbeb;color:#78350f">
+    <h1 style="margin:0 0 .5rem 0;font-size:1.25rem">Filter Builder Demo – Coding-Challenge (wallaround.de)</h1>
+    <p>Unabhängiges Portfolio-Projekt. Keine Kooperation oder geschäftliche Verbindung zu <strong>wallaround.de</strong>.</p>
+    <p>Transparenz: Umsetzung in ca. <strong>10 Stunden</strong>, <strong>nicht für den produktiven Einsatz</strong>. Mehr: <a href="https://github.com/conradkirschner/">github.com/conradkirschner</a></p>
+  </main>
+</noscript>
+
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
 </html>

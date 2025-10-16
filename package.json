@@ -6,7 +6,8 @@
   "scripts": {
     "build": "npm run -w filter-builder-core build && npm run -w filter-builder-react build && npm run -w filter-builder-core build",
     "test": "npm run -w filter-builder-core test && npm run -w filter-builder-react test",
-    "dev": "npm run -w filter-builder-react dev"
+    "dev": "npm run -w filter-builder-react dev",
+    "gh:release": "npm run -w filter-builder-react release:gh:page"
   },
   "engines": { "node": ">=20", "npm": ">=10", "yarn": ">=1.22.22" }
 }

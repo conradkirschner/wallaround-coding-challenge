@@ -23,6 +23,9 @@ yarn install
 yarn workspace filter-builder-core build
 yarn workspace filter-builder-react build
 ```
+## Live-Demo
+**Wallaround.de Coding-Challenge – Filter Builder Demo**  
+➡️ https://conradkirschner.github.io/wallaround-coding-challenge/
 
 ### Beispiel‑App (Vite) für die Entwicklung
 Das React‑Paket enthält eine Vite‑Demo:
