@@ -1,0 +1,18 @@
+[
+  {
+    "id": 9001,
+    "name": "Keyboard",
+    "category": "electronics",
+    "price": 99,
+    "inStock": true,
+    "createdAt": "2024-06-01"
+  },
+  {
+    "id": 9002,
+    "name": "Shelf",
+    "category": "furniture",
+    "price": 129,
+    "inStock": false,
+    "createdAt": "2024-06-02"
+  }
+]

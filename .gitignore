@@ -1,0 +1,48 @@
+# Node/monorepo
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Coverage / NYC / lcov
+coverage/
+**/coverage/
+.nyc_output/
+**/.nyc_output/
+*.lcov
+
+# TypeScript
+*.tsbuildinfo
+
+# Cypress artifacts (any package)
+cypress/screenshots*/
+cypress/videos/
+**/cypress/screenshots*/
+**/cypress/videos/
+**/cypress/downloads/
+
+# Vite & other caches
+**/.vite/
+.turbo/
+**/.turbo/
+.eslintcache
+.stylelintcache
+
+# Env files
+.env*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,20 @@
+# Build
+dist/
+build/
+
+# Coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# TS / Lint
+*.tsbuildinfo
+.eslintcache
+
+# Logs
+yarn-error.log*
+npm-debug.log*
+
+# stryker
+.stryker-tmp
+reports
