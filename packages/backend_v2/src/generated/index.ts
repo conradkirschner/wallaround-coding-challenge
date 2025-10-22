@@ -1,4 +1,3 @@
-export * from './mikroorm/AddressFilterQuery';
-export * from './mikroorm/AddressResolver';
-export * from './mikroorm/UserFilterQuery';
-export * from './mikroorm/UserResolver';
+// AUTO-GENERATED FILE — top-level barrel exporting per-ORM namespaces.
+
+export * as prisma from './prisma';

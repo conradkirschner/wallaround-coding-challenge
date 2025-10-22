@@ -1,39 +1,4 @@
----
-to: <%= out %>/<%= entity %>Resolver.ts
----
-<%
-function parseArg(val, fallback) {
-  try {
-    if (val === undefined || val === null) return fallback;
-    if (typeof val === 'string') return JSON.parse(val);
-    return val;
-  } catch (_) {
-    return fallback;
-  }
-}
 
-const FIELDS    = parseArg(fields, []);     // [{ name, type, operators, enumValues }]
-const SELECTS   = parseArg(selects, []);    // string[]
-const RELATIONS = parseArg(relations, []);  // string[]
-
-const ENTITY_ONLY_OPS = Array.from(new Set(
-  FIELDS.flatMap(f => Array.isArray(f.operators) ? f.operators : [])
-));
-
-// A safe superset that covers relation-usable ops as well.
-// We merge these with ENTITY_ONLY_OPS so dotted relation fields won’t be blocked.
-const RELATION_SAFE_OPS = [
-  'eq','neq','in',
-  'gt','gte','lt','lte',
-  'between',
-  'contains','starts_with','ends_with',
-  'is_null','is_not_null',
-];
-
-const MERGED_ENTITY_OPS = Array.from(new Set([...ENTITY_ONLY_OPS, ...RELATION_SAFE_OPS])).sort();
-
-const lcEntity = entity.charAt(0).toLowerCase() + entity.slice(1);
-%>
 /* THIS FILE IS AUTO-GENERATED. DO NOT EDIT.
  *
  * Notes for codegen:
@@ -48,23 +13,23 @@ import { CustomOpRegistry, type IR } from 'src/filtering/custom-ops';
 import { validateFilter } from 'src/filtering/validate';
 import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
-import type { <%= entity %>Expr as Expr   } from './<%= entity %>FilterQuery';
+import type { PostExpr as Expr   } from './PostFilterQuery';
 import type { MikroOrmCtx } from 'src/filtering/runtime/driver';
 
 /** Compile-time selectability (entity-scoped) */
-export const <%= entity %>_SELECTABLE = <%- JSON.stringify(SELECTS) %> as const;
+export const Post_SELECTABLE = ["author","content","createdAt","id","published","title","updatedAt"] as const;
 /** Utility: if A is never, use B */
 type Fallback<A, B> = [A] extends [never] ? B : A;
-export type <%= entity %>SelectField = Fallback<typeof <%= entity %>_SELECTABLE[number], string>;
+export type PostSelectField = Fallback<typeof Post_SELECTABLE[number], string>;
 
 /** Top-level relation roots (entity-scoped) */
-export const <%= entity %>_RELATIONS = <%- JSON.stringify(RELATIONS) %> as const;
-export type <%= entity %>RelationRoot = Fallback<typeof <%= entity %>_RELATIONS[number], string>;
+export const Post_RELATIONS = [] as const;
+export type PostRelationRoot = Fallback<typeof Post_RELATIONS[number], string>;
 
 /** Operator set derived from @Filterable annotations (entity-scoped, merged with relation-safe ops) */
-export const <%= entity %>_OPS = <%- JSON.stringify(MERGED_ENTITY_OPS) %> as const;
+export const Post_OPS = ["between","contains","ends_with","eq","gt","gte","in","is_not_null","is_null","lt","lte","neq","starts_with"] as const;
 /** Internal operator union for this resolver (kept un-exported to avoid cross-entity collisions) */
-type Operator = typeof <%= entity %>_OPS[number];
+type Operator = typeof Post_OPS[number];
 
 /** ---------- Strongly-typed projection for 'plain' shape ---------- */
 type UnionToIntersection<U> =
@@ -337,10 +302,10 @@ function buildRelationWhereForRoot(
 function buildPopulateWhereMap(
   meta: Readonly<FilterableMap>,
   filter?: FilterInput,
-): Partial<Record<<%= entity %>RelationRoot, Expr>> {
+): Partial<Record<PostRelationRoot, Expr>> {
   if (!filter) return {};
-  const out: Partial<Record<<%= entity %>RelationRoot, Expr>> = {};
-  for (const root of <%= entity %>_RELATIONS as readonly <%= entity %>RelationRoot[]) {
+  const out: Partial<Record<PostRelationRoot, Expr>> = {};
+  for (const root of Post_RELATIONS as readonly PostRelationRoot[]) {
     const w = buildRelationWhereForRoot(meta, root, filter);
     if (w && Object.keys(w).length > 0) out[root] = w;
   }
@@ -360,21 +325,21 @@ function getScopedEm(ctx: MikroOrmCtx) {
  * Derive populate roots and a FLAT string[] of fields.
  * Flat fields avoid the MikroORM runtime error "f.startsWith is not a function".
  */
-function buildPopulateAndFields(select?: readonly <%= entity %>SelectField[]): {
-  populate?: readonly <%= entity %>RelationRoot[];
+function buildPopulateAndFields(select?: readonly PostSelectField[]): {
+  populate?: readonly PostRelationRoot[];
   fields?: readonly string[];
 } {
   if (!select || select.length === 0) return {};
 
-  const relSet = new Set<string>(<%= entity %>_RELATIONS as readonly string[]);
-  const populateRoots = new Set<<%= entity %>RelationRoot>();
+  const relSet = new Set<string>(Post_RELATIONS as readonly string[]);
+  const populateRoots = new Set<PostRelationRoot>();
   const scalar: string[] = [];
   const dotted: string[] = [];
 
   for (const s of select as readonly string[]) {
     const dot = s.indexOf('.');
     if (dot > 0) {
-      const root  = s.slice(0, dot) as <%= entity %>RelationRoot;
+      const root  = s.slice(0, dot) as PostRelationRoot;
       if (relSet.has(root)) {
         populateRoots.add(root);
         dotted.push(s);
@@ -383,7 +348,7 @@ function buildPopulateAndFields(select?: readonly <%= entity %>SelectField[]): {
       }
     } else {
       if (relSet.has(s)) {
-        populateRoots.add(s as <%= entity %>RelationRoot);
+        populateRoots.add(s as PostRelationRoot);
       } else {
         scalar.push(s);
       }
@@ -394,25 +359,25 @@ function buildPopulateAndFields(select?: readonly <%= entity %>SelectField[]): {
   const fieldsFlat = uniq([...scalar, ...dotted]);
 
   const result: {
-    populate?: readonly <%= entity %>RelationRoot[];
+    populate?: readonly PostRelationRoot[];
     fields?: readonly string[];
   } = {};
 
-  if (populateRoots.size > 0) result.populate = Array.from(populateRoots) as readonly <%= entity %>RelationRoot[];
+  if (populateRoots.size > 0) result.populate = Array.from(populateRoots) as readonly PostRelationRoot[];
   if (fieldsFlat.length > 0)  result.fields   = fieldsFlat as readonly string[];
 
   return result;
 }
 
 /** Return shape for 'plain' */
-type <%= entity %>Plain<S extends readonly <%= entity %>SelectField[] | undefined, T> =
-  S extends readonly <%= entity %>SelectField[] ? PickByPaths<T, S> : Record<string, unknown>;
+type PostPlain<S extends readonly PostSelectField[] | undefined, T> =
+  S extends readonly PostSelectField[] ? PickByPaths<T, S> : Record<string, unknown>;
 
-export interface <%= entity %>ResolveOptions<S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined> {
+export interface PostResolveOptions<S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined> {
   limits?: Partial<FilterLimits>;
   query?: {
     select?: S;
-    sort?: ReadonlyArray<{ field: <%= entity %>SelectField; direction?: 'asc' | 'desc' }>;
+    sort?: ReadonlyArray<{ field: PostSelectField; direction?: 'asc' | 'desc' }>;
     limit?: number;
     offset?: number;
   };
@@ -422,66 +387,66 @@ export interface <%= entity %>ResolveOptions<S extends readonly <%= entity %>Sel
 }
 
 /** Overload 1: ctx + EntityCtor (entity) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
   ctx: MikroOrmCtx,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape: 'entity' },
+  options?: PostResolveOptions<S> & { shape: 'entity' },
 ): Promise<T[]>;
 /** Overload 2: ctx + EntityCtor (plain) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
   ctx: MikroOrmCtx,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape?: 'plain' },
-): Promise<<%= entity %>Plain<S, T>[]>;
+  options?: PostResolveOptions<S> & { shape?: 'plain' },
+): Promise<PostPlain<S, T>[]>;
 /** Overload 3: ctx + entityName + ctor (entity) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
   ctx: MikroOrmCtx,
   entity: EntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape: 'entity' },
+  options?: PostResolveOptions<S> & { shape: 'entity' },
 ): Promise<T[]>;
 /** Overload 4: ctx + entityName + ctor (plain) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
   ctx: MikroOrmCtx,
   entity: EntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape?: 'plain' },
-): Promise<<%= entity %>Plain<S, T>[]>;
+  options?: PostResolveOptions<S> & { shape?: 'plain' },
+): Promise<PostPlain<S, T>[]>;
 
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
   ctx: MikroOrmCtx,
   a: EntityName<T> | (new (...args: never[]) => T),
   b?: FilterInput | (new (...args: never[]) => T),
   c?: FilterInput | CustomOpRegistry,
-  d?: CustomOpRegistry | <%= entity %>ResolveOptions<S>,
-  e?: <%= entity %>ResolveOptions<S>,
-): Promise<T[] | <%= entity %>Plain<S, T>[]> {
+  d?: CustomOpRegistry | PostResolveOptions<S>,
+  e?: PostResolveOptions<S>,
+): Promise<T[] | PostPlain<S, T>[]> {
   let entityName!: EntityName<T>;
   let ctor!: new (...args: never[]) => T;
   let filter: FilterInput | undefined;
   let custom: CustomOpRegistry | undefined;
-  let opts: <%= entity %>ResolveOptions<S> | undefined;
+  let opts: PostResolveOptions<S> | undefined;
 
   if (typeof b === 'function') {
     entityName = a as EntityName<T>;
     ctor = b as new (...args: never[]) => T;
     filter = c as FilterInput | undefined;
     custom = d as CustomOpRegistry | undefined;
-    opts = e as <%= entity %>ResolveOptions<S> | undefined;
+    opts = e as PostResolveOptions<S> | undefined;
   } else {
     entityName = a as EntityName<T>;
     ctor = a as new (...args: never[]) => T;
     filter = b as FilterInput | undefined;
     custom = c as CustomOpRegistry | undefined;
-    opts = d as <%= entity %>ResolveOptions<S> | undefined;
+    opts = d as PostResolveOptions<S> | undefined;
   }
 
   const shape = opts?.shape ?? 'plain';
@@ -590,7 +555,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
   const selPaths = (select as readonly string[]) ?? [];
   const picked = (rows as unknown as object[]).map((row) =>
     selPaths.length ? projectRow(row, selPaths) : ({} as Record<string, unknown>)
-  ) as <%= entity %>Plain<S, T>[];
+  ) as PostPlain<S, T>[];
 
   return picked;
 }

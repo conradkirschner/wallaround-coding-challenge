@@ -7,11 +7,6 @@ import { Filterable } from 'src/filtering/filterable';
 import type { Uuid } from './user.entity';
 import { User } from './user.entity';
 
-// Operator sets (typed)
-const STRING_OPS  = ['eq','neq','in','contains','starts_with','ends_with','is_null','is_not_null'] as const;
-const BOOLEAN_OPS = ['eq','neq','is_null','is_not_null'] as const;
-const DATE_OPS    = ['eq','neq','gt','gte','lt','lte','between','in','is_null','is_not_null'] as const;
-
 @Entity({ tableName: 'posts' })
 @Index({ properties: ['author'] })
 @Index({ properties: ['createdAt'] })
@@ -24,22 +19,22 @@ export class Post {
     id: Uuid = randomUUID();
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'string', operators: STRING_OPS })
+    @Filterable({ type: 'string', operators: ['eq','neq','in','contains','starts_with','ends_with'] })
     @Property({ type: 'string' })
     title!: string;
 
     @Selectable()
-    @Filterable({ type: 'string', operators: STRING_OPS })
+    @Filterable({ type: 'string', operators: ['eq','neq','in','contains','starts_with','ends_with','is_null','is_not_null'] })
     @Property({ type: 'string', nullable: true })
     content?: string;
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'boolean', operators: BOOLEAN_OPS })
+    @Filterable({ type: 'boolean', operators: ['eq','neq'] })
     @Property({ type: 'boolean', default: false })
     published: boolean = false;
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'date', operators: DATE_OPS })
+    @Filterable({ type: 'date', operators: ['eq','neq','gt','gte','lt','lte','between'] })
     @Property({ type: Date })
     createdAt: Date = new Date();
 

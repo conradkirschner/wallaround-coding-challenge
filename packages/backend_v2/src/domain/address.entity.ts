@@ -7,7 +7,6 @@ import { Filterable } from 'src/filtering/filterable';
 import type { Uuid } from './user.entity';
 import { User } from './user.entity';
 
-const STRING_OPS = ['eq','neq','in','contains','starts_with','ends_with','is_null','is_not_null'] as const;
 
 @Entity({ tableName: 'addresses' })
 @Index({ properties: ['city'] })
@@ -20,27 +19,27 @@ export class Address {
     id: Uuid = randomUUID();
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'string', operators: STRING_OPS })
+    @Filterable({ type: 'string', operators: ['eq','neq','in','contains','starts_with','ends_with'] })
     @Property({ type: 'string' })
-    street1!: string;
+    street1?: string;
 
     @Selectable()
-    @Filterable({ type: 'string', operators: STRING_OPS })
+    @Filterable({ type: 'string', operators: ['eq','neq','in','contains','starts_with','ends_with','is_null','is_not_null'] })
     @Property({ type: 'string', nullable: true })
     street2?: string;
 
     @Selectable()
-    @Filterable({ type: 'string', operators: STRING_OPS })
+    @Filterable({ type: 'string', operators: ['eq','neq','in','contains','starts_with','ends_with'] })
     @Property({ type: 'string' })
     postalCode!: string;
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'string', operators: STRING_OPS })
+    @Filterable({ type: 'string', operators: ['eq','neq','in','contains','starts_with','ends_with'] })
     @Property({ type: 'string' })
     city!: string;
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'string', operators: STRING_OPS })
+    @Filterable({ type: 'string', operators: ['eq','neq','in','contains','starts_with','ends_with'] })
     @Property({ type: 'string' })
     country!: string;
 

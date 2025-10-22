@@ -1,53 +1,4 @@
----
-to: <%= out %>/<%= entity %>Resolver.ts
----
-<%
-  // ===== EJS prelude (not emitted) =====
-  function parseArg(val, fallback) {
-    try {
-      if (val === undefined || val === null) return fallback;
-      if (typeof val === 'string') return JSON.parse(val);
-      return val;
-    } catch {
-      return fallback;
-    }
-  }
 
-  const FIELDS    = parseArg(fields, []);     // [{ name, type, operators, enumValues }]
-  const SELECTS   = parseArg(selects, []);    // string[]
-  const RAW_REL   = parseArg(relations, []);  // string[] | { name, kind }[]
-
-  // Normalize relations to { name, kind } using your annotations (kind: 'one' | 'many').
-  // If kind is not provided in input, default to 'many'.
-  const RELS = RAW_REL.map((r) =>
-    typeof r === 'string'
-      ? { name: r, kind: 'many' }
-      : { name: r.name, kind: (r.kind === 'one' ? 'one' : 'many') }
-  );
-
-  const RELATION_NAMES = RELS.map(r => r.name);
-  const REL_ONE  = RELS.filter(r => r.kind === 'one');
-  const REL_MANY = RELS.filter(r => r.kind === 'many');
-
-  // Operators explicitly present on the entity's own fields
-  const ENTITY_ONLY_OPS = Array.from(new Set(
-    FIELDS.flatMap(f => Array.isArray(f.operators) ? f.operators : [])
-  ));
-
-  // Relation-safe superset so dotted fields like address.city don't lose their operators.
-  const RELATION_SAFE_OPS = [
-    'eq','neq','in',
-    'gt','gte','lt','lte',
-    'between',
-    'contains','starts_with','ends_with',
-    'is_null','is_not_null',
-  ];
-
-  // Merged set exported for this entity (kept broad; per-field allow-lists still enforced at runtime)
-  const MERGED_ENTITY_OPS = Array.from(new Set([...ENTITY_ONLY_OPS, ...RELATION_SAFE_OPS])).sort();
-
-  const lcEntity = entity.charAt(0).toLowerCase() + entity.slice(1);
-%>
 /* THIS FILE IS AUTO-GENERATED (PRISMA). DO NOT EDIT.
  *
  * Notes:
@@ -70,22 +21,22 @@ import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
 import type { PrismaCtx } from 'src/filtering/runtime/driver';
 // Domain ctor import to support string-only calls:
-import { <%= entity %> as Domain<%= entity %> } from 'src/domain/<%= entity.toLowerCase() %>.entity';
+import { User as DomainUser } from 'src/domain/user.entity';
 
 /** Compile-time selectability (entity-scoped) */
-export const <%= entity %>_SELECTABLE = <%- JSON.stringify(SELECTS) %> as const;
+export const User_SELECTABLE = ["address","address.city","address.country","address.postalCode","address.street1","address.street2","age","createdAt","displayName","email","id","isActive","posts","posts.content","posts.createdAt","posts.published","posts.title","role","updatedAt"] as const;
 /** Utility: if A is never, use B */
 type Fallback<A, B> = [A] extends [never] ? B : A;
-export type <%= entity %>SelectField = Fallback<typeof <%= entity %>_SELECTABLE[number], string>;
+export type UserSelectField = Fallback<typeof User_SELECTABLE[number], string>;
 
 /** Top-level relation roots (entity-scoped) */
-export const <%= entity %>_RELATIONS = <%- JSON.stringify(RELATION_NAMES) %> as const;
-export type <%= entity %>RelationRoot = Fallback<typeof <%= entity %>_RELATIONS[number], string>;
+export const User_RELATIONS = ["address","posts"] as const;
+export type UserRelationRoot = Fallback<typeof User_RELATIONS[number], string>;
 
 /** Operator set (entity-scoped; merged entity + relation-safe) */
-export const <%= entity %>_OPS = <%- JSON.stringify(MERGED_ENTITY_OPS) %> as const;
+export const User_OPS = ["between","contains","ends_with","eq","gt","gte","in","is_not_null","is_null","lt","lte","neq","starts_with"] as const;
 /** Keep a local Operator type; not used to gate per-field allow-lists */
-type Operator = typeof <%= entity %>_OPS[number];
+type Operator = typeof User_OPS[number];
 
 /** ---------- Strongly-typed projection helpers ---------- */
 type UnionToIntersection<U> =
@@ -179,7 +130,7 @@ function emitConditionPrisma(
   fieldType: FieldType,
   cond: ConditionNode,
   defAllowed?: readonly string[], // allow any string (incl. custom ops)
-): Prisma.<%= entity %>WhereInput {
+): Prisma.UserWhereInput {
   const name = cond.op.toLowerCase() as AnyOp | string;
 
   if (defAllowed && !(defAllowed as readonly string[]).includes(name)) {
@@ -199,18 +150,18 @@ function emitConditionPrisma(
 
   if (!field.includes('.')) {
     const cmp = scalarComparator(fieldType, op as AnyOp, v as any);
-    if (cmp !== undefined) return (cmp === null ? { [field]: null } : { [field]: cmp }) as Prisma.<%= entity %>WhereInput;
+    if (cmp !== undefined) return (cmp === null ? { [field]: null } : { [field]: cmp }) as Prisma.UserWhereInput;
   } else {
     const cmp = scalarComparator(fieldType, op as AnyOp, v as any);
     if (cmp !== undefined) {
       const tail = field.slice(field.indexOf('.') + 1);
       const leaf = cmp === null ? null : { [tail]: cmp } as Record<string, unknown> | null;
-      return nestRelWhere(relMeta, field, leaf) as Prisma.<%= entity %>WhereInput;
+      return nestRelWhere(relMeta, field, leaf) as Prisma.UserWhereInput;
     }
   }
 
   // Unknown/custom op → return undefined (caller will try registry/custom path)
-  return {} as unknown as Prisma.<%= entity %>WhereInput;
+  return {} as unknown as Prisma.UserWhereInput;
 }
 
 /** IR → Prisma where translation (custom ops path) */
@@ -227,7 +178,7 @@ const KEY_MAP: Record<MappableOp, PrismaComparatorKey> = {
   ends_with: 'endsWith',
 } as const;
 
-function fromIRPrisma(relMeta: RelationMeta, ir: IR): Prisma.<%= entity %>WhereInput {
+function fromIRPrisma(relMeta: RelationMeta, ir: IR): Prisma.UserWhereInput {
   if ('and' in ir) return { AND: ir.and.map((x) => fromIRPrisma(relMeta, x)) };
   if ('or'  in ir) return { OR:  ir.or.map((x) => fromIRPrisma(relMeta, x)) };
 
@@ -237,7 +188,7 @@ function fromIRPrisma(relMeta: RelationMeta, ir: IR): Prisma.<%= entity %>WhereI
   if (op === 'between') {
     const b = ir as Extract<IR, { op: 'between' }>;
     if (!f.includes('.')) {
-      return { AND: [{ [f]: { gte: b.a } }, { [f]: { lte: b.b } }] } as Prisma.<%= entity %>WhereInput;
+      return { AND: [{ [f]: { gte: b.a } }, { [f]: { lte: b.b } }] } as Prisma.UserWhereInput;
     }
     const leaf = f.split('.')[1]!;
     return {
@@ -245,18 +196,18 @@ function fromIRPrisma(relMeta: RelationMeta, ir: IR): Prisma.<%= entity %>WhereI
         nestRelWhere(relMeta, f, { [leaf]: { gte: b.a } }),
         nestRelWhere(relMeta, f, { [leaf]: { lte: b.b } }),
       ],
-    } as Prisma.<%= entity %>WhereInput;
+    } as Prisma.UserWhereInput;
   }
 
   if (op === 'is_null') {
-    return f.includes('.') ? nestRelWhere(relMeta, f, null) as Prisma.<%= entity %>WhereInput
-                           : ({ [f]: null } as Prisma.<%= entity %>WhereInput);
+    return f.includes('.') ? nestRelWhere(relMeta, f, null) as Prisma.UserWhereInput
+                           : ({ [f]: null } as Prisma.UserWhereInput);
   }
   if (op === 'is_not_null') {
     const leaf = f.includes('.') ? f.split('.')[1]! : f;
     const payload = { [leaf]: { not: null } } as Record<string, unknown>;
-    return f.includes('.') ? nestRelWhere(relMeta, f, payload) as Prisma.<%= entity %>WhereInput
-                           : ({ [f]: { not: null } } as Prisma.<%= entity %>WhereInput);
+    return f.includes('.') ? nestRelWhere(relMeta, f, payload) as Prisma.UserWhereInput
+                           : ({ [f]: { not: null } } as Prisma.UserWhereInput);
   }
 
   // Map remaining ops to Prisma comparator keys (typed)
@@ -282,10 +233,10 @@ function fromIRPrisma(relMeta: RelationMeta, ir: IR): Prisma.<%= entity %>WhereI
   }
 
   if (!f.includes('.')) {
-    return { [f]: { [key]: val } } as Prisma.<%= entity %>WhereInput;
+    return { [f]: { [key]: val } } as Prisma.UserWhereInput;
   }
   const leafName = f.split('.')[1]!;
-  return nestRelWhere(relMeta, f, { [leafName]: { [key]: val } }) as Prisma.<%= entity %>WhereInput;
+  return nestRelWhere(relMeta, f, { [leafName]: { [key]: val } }) as Prisma.UserWhereInput;
 }
 
 /** Recursively build Prisma where from the filter AST (top-level entity) */
@@ -294,7 +245,7 @@ function buildWherePrisma(
   meta: Readonly<FilterableMap>,
   node: FilterNode,
   custom?: CustomOpRegistry,
-): Prisma.<%= entity %>WhereInput {
+): Prisma.UserWhereInput {
   if (isGroup(node)) {
     if ('and' in node) return { AND: node.and.map((c) => buildWherePrisma(relMeta, meta, c, custom)) };
     return { OR: node.or.map((c) => buildWherePrisma(relMeta, meta, c, custom)) };
@@ -418,24 +369,31 @@ function buildRelationWhereForRoot(
 }
 
 /** Relation where map (ONLY for to-many relations) */
-type <%= entity %>RelationWhereMap = {
-<% for (const r of REL_MANY) { %>
-  <%- r.name %>?: NonNullable<Prisma.<%= entity %>$<%- r.name %>Args['where']>;
-<% } %>
+type UserRelationWhereMap = {
+
+  address?: NonNullable<Prisma.User$addressArgs['where']>;
+
+  posts?: NonNullable<Prisma.User$postsArgs['where']>;
+
 };
 
 function buildRelationWhereMap(
   meta: Readonly<FilterableMap>,
   filter?: FilterInput,
-): Partial<<%= entity %>RelationWhereMap> {
+): Partial<UserRelationWhereMap> {
   if (!filter) return {};
-  const out: Partial<<%= entity %>RelationWhereMap> = {};
-<% for (const r of REL_MANY) { %>
+  const out: Partial<UserRelationWhereMap> = {};
+
   {
-    const w = buildRelationWhereForRoot(meta, '<%- r.name %>', filter);
-    if (w) out.<%- r.name %> = w as NonNullable<Prisma.<%= entity %>$<%- r.name %>Args['where']>;
+    const w = buildRelationWhereForRoot(meta, 'address', filter);
+    if (w) out.address = w as NonNullable<Prisma.User$addressArgs['where']>;
   }
-<% } %>
+
+  {
+    const w = buildRelationWhereForRoot(meta, 'posts', filter);
+    if (w) out.posts = w as NonNullable<Prisma.User$postsArgs['where']>;
+  }
+
   return out;
 }
 
@@ -443,16 +401,18 @@ function buildRelationWhereMap(
 
 /** Build Prisma "select" and apply relation-scoped where (only for to-many) */
 function buildSelect(
-  select: readonly <%= entity %>SelectField[] | undefined,
-  relWhere: Partial<<%= entity %>RelationWhereMap>,
-): Prisma.<%= entity %>Select | undefined {
+  select: readonly UserSelectField[] | undefined,
+  relWhere: Partial<UserRelationWhereMap>,
+): Prisma.UserSelect | undefined {
   if (!select || select.length === 0) return undefined;
 
-  const obj: Prisma.<%= entity %>Select = {};
+  const obj: Prisma.UserSelect = {};
   const scalar: string[] = [];
-<% for (const r of RELS) { %>
-  const <%- r.name %>Leaves: string[] = [];
-<% } %>
+
+  const addressLeaves: string[] = [];
+
+  const postsLeaves: string[] = [];
+
 
   for (const s of select as readonly string[]) {
     const dot = s.indexOf('.');
@@ -460,9 +420,11 @@ function buildSelect(
     const root = s.slice(0, dot);
     const leaf = s.slice(dot + 1);
     switch (root) {
-<% for (const r of RELS) { %>
-      case '<%- r.name %>': <%- r.name %>Leaves.push(leaf); break;
-<% } %>
+
+      case 'address': addressLeaves.push(leaf); break;
+
+      case 'posts': postsLeaves.push(leaf); break;
+
       default:
         // Unknown dotted root — ignore to avoid invalid select keys like "a.b"
         break;
@@ -471,40 +433,55 @@ function buildSelect(
 
   for (const s of scalar) (obj as Record<string, unknown>)[s] = true;
 
-<% for (const r of RELS) { %>
-  if (<%- r.name %>Leaves.length) {
+
+  if (addressLeaves.length) {
     // Select type comes from generated relation args (exists for to-many; for one-to-one, this is structurally compatible)
-    const sel = {} as NonNullable<Prisma.<%= entity %>$<%- r.name %>Args['select']>;
-    for (const k of Array.from(new Set(<%- r.name %>Leaves))) (sel as Record<string, true>)[k] = true;
+    const sel = {} as NonNullable<Prisma.User$addressArgs['select']>;
+    for (const k of Array.from(new Set(addressLeaves))) (sel as Record<string, true>)[k] = true;
 
-    const args: Prisma.<%= entity %>$<%- r.name %>Args = { select: sel };
+    const args: Prisma.User$addressArgs = { select: sel };
 
-    <% if (r.kind === 'many') { %>
+    
     // Only to-many relations support 'where' in nested selection
-    if (relWhere.<%- r.name %>) args.where = relWhere.<%- r.name %>!;
-    <% } %>
+    if (relWhere.address) args.where = relWhere.address!;
+    
 
-    (obj as Prisma.<%= entity %>Select).<%- r.name %> = args;
+    (obj as Prisma.UserSelect).address = args;
   }
-<% } %>
+
+  if (postsLeaves.length) {
+    // Select type comes from generated relation args (exists for to-many; for one-to-one, this is structurally compatible)
+    const sel = {} as NonNullable<Prisma.User$postsArgs['select']>;
+    for (const k of Array.from(new Set(postsLeaves))) (sel as Record<string, true>)[k] = true;
+
+    const args: Prisma.User$postsArgs = { select: sel };
+
+    
+    // Only to-many relations support 'where' in nested selection
+    if (relWhere.posts) args.where = relWhere.posts!;
+    
+
+    (obj as Prisma.UserSelect).posts = args;
+  }
+
 
   return obj;
 }
 
 /** Build Prisma orderBy (top-level + dotted 1:1; skip dotted to-many) */
 function buildOrderBy(
-  sorts: ReadonlyArray<{ field: <%= entity %>SelectField; direction?: 'asc' | 'desc' }> | undefined,
+  sorts: ReadonlyArray<{ field: UserSelectField; direction?: 'asc' | 'desc' }> | undefined,
   relMeta: RelationMeta,
-): Prisma.Enumerable<Prisma.<%= entity %>OrderByWithRelationInput> | undefined {
+): Prisma.Enumerable<Prisma.UserOrderByWithRelationInput> | undefined {
   if (!sorts || sorts.length === 0) return undefined;
-  const out: Prisma.<%= entity %>OrderByWithRelationInput[] = [];
+  const out: Prisma.UserOrderByWithRelationInput[] = [];
 
   for (const s of sorts) {
     const f = s.field as string;
     const dir = s.direction ?? 'asc';
     const dot = f.indexOf('.');
     if (dot < 0) {
-      out.push({ [f]: dir } as Prisma.<%= entity %>OrderByWithRelationInput);
+      out.push({ [f]: dir } as Prisma.UserOrderByWithRelationInput);
       continue;
     }
     const root = f.slice(0, dot);
@@ -513,21 +490,21 @@ function buildOrderBy(
 
     if (meta?.kind === 'one') {
       // nested orderBy for 1:1 only
-      out.push({ [root]: { [leaf]: dir } } as unknown as Prisma.<%= entity %>OrderByWithRelationInput);
+      out.push({ [root]: { [leaf]: dir } } as unknown as Prisma.UserOrderByWithRelationInput);
     }
   }
   return out.length ? out : undefined;
 }
 
 /** Return shape for 'plain' */
-type <%= entity %>Plain<S extends readonly <%= entity %>SelectField[] | undefined, T> =
-  S extends readonly <%= entity %>SelectField[] ? PickByPaths<T, S> : Record<string, unknown>;
+type UserPlain<S extends readonly UserSelectField[] | undefined, T> =
+  S extends readonly UserSelectField[] ? PickByPaths<T, S> : Record<string, unknown>;
 
-export interface <%= entity %>ResolveOptions<S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined> {
+export interface UserResolveOptions<S extends readonly UserSelectField[] | undefined = readonly UserSelectField[] | undefined> {
   limits?: Partial<FilterLimits>;
   query?: {
     select?: S;
-    sort?: ReadonlyArray<{ field: <%= entity %>SelectField; direction?: 'asc' | 'desc' }>;
+    sort?: ReadonlyArray<{ field: UserSelectField; direction?: 'asc' | 'desc' }>;
     limit?: number;
     offset?: number;
   };
@@ -541,90 +518,90 @@ type PrismaEntityName<T> = string;
 
 /* ========================= Overloads ========================= */
 /** 1) ctx + Ctor (entity) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolveUser<T extends object, S extends readonly UserSelectField[] | undefined = readonly UserSelectField[] | undefined>(
   ctx: PrismaCtx,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape: 'entity' },
-): Promise<Awaited<ReturnType<PrismaClient['<%- lcEntity %>']['findMany']>>>;
+  options?: UserResolveOptions<S> & { shape: 'entity' },
+): Promise<Awaited<ReturnType<PrismaClient['user']['findMany']>>>;
 /** 2) ctx + Ctor (plain) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolveUser<T extends object, S extends readonly UserSelectField[] | undefined = readonly UserSelectField[] | undefined>(
   ctx: PrismaCtx,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape?: 'plain' },
-): Promise<<%= entity %>Plain<S, T>[]>;
+  options?: UserResolveOptions<S> & { shape?: 'plain' },
+): Promise<UserPlain<S, T>[]>;
 /** 3) ctx + entityName + Ctor (entity) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolveUser<T extends object, S extends readonly UserSelectField[] | undefined = readonly UserSelectField[] | undefined>(
   ctx: PrismaCtx,
   entity: PrismaEntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape: 'entity' },
-): Promise<Awaited<ReturnType<PrismaClient['<%- lcEntity %>']['findMany']>>>;
+  options?: UserResolveOptions<S> & { shape: 'entity' },
+): Promise<Awaited<ReturnType<PrismaClient['user']['findMany']>>>;
 /** 4) ctx + entityName + Ctor (plain) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolveUser<T extends object, S extends readonly UserSelectField[] | undefined = readonly UserSelectField[] | undefined>(
   ctx: PrismaCtx,
   entity: PrismaEntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape?: 'plain' },
-): Promise<<%= entity %>Plain<S, T>[]>;
+  options?: UserResolveOptions<S> & { shape?: 'plain' },
+): Promise<UserPlain<S, T>[]>;
 /** 5) ctx + entityName ONLY (entity) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolveUser<T extends object, S extends readonly UserSelectField[] | undefined = readonly UserSelectField[] | undefined>(
   ctx: PrismaCtx,
   entity: PrismaEntityName<T>,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape: 'entity' },
-): Promise<Awaited<ReturnType<PrismaClient['<%- lcEntity %>']['findMany']>>>;
+  options?: UserResolveOptions<S> & { shape: 'entity' },
+): Promise<Awaited<ReturnType<PrismaClient['user']['findMany']>>>;
 /** 6) ctx + entityName ONLY (plain) */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolveUser<T extends object, S extends readonly UserSelectField[] | undefined = readonly UserSelectField[] | undefined>(
   ctx: PrismaCtx,
   entity: PrismaEntityName<T>,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
-  options?: <%= entity %>ResolveOptions<S> & { shape?: 'plain' },
-): Promise<<%= entity %>Plain<S, T>[]>;
+  options?: UserResolveOptions<S> & { shape?: 'plain' },
+): Promise<UserPlain<S, T>[]>;
 
 /* ====================== Implementation ====================== */
-export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
+export async function resolveUser<T extends object, S extends readonly UserSelectField[] | undefined = readonly UserSelectField[] | undefined>(
   ctx: PrismaCtx,
   a: PrismaEntityName<T> | (new (...args: never[]) => T),
   b?: FilterInput | (new (...args: never[]) => T),
   c?: FilterInput | CustomOpRegistry,
-  d?: CustomOpRegistry | <%= entity %>ResolveOptions<S>,
-  e?: <%= entity %>ResolveOptions<S>,
+  d?: CustomOpRegistry | UserResolveOptions<S>,
+  e?: UserResolveOptions<S>,
 ) {
   // Normalize to: ctor, filter, custom, opts (support ctor form, string+ctor, string-only)
   let ctor!: new (...args: never[]) => T;
   let filter: FilterInput | undefined;
   let custom: CustomOpRegistry | undefined;
-  let opts: <%= entity %>ResolveOptions<S> | undefined;
+  let opts: UserResolveOptions<S> | undefined;
 
   if (typeof a === 'function') {
     // (ctx, ctor, filter?, custom?, opts?)
     ctor   = a;
     filter = b as FilterInput | undefined;
     custom = c as CustomOpRegistry | undefined;
-    opts   = d as <%= entity %>ResolveOptions<S> | undefined;
+    opts   = d as UserResolveOptions<S> | undefined;
   } else {
     if (typeof b === 'function') {
       // (ctx, 'Entity', ctor, filter?, custom?, opts?)
       ctor   = b as new (...args: never[]) => T;
       filter = c as FilterInput | undefined;
       custom = d as CustomOpRegistry | undefined;
-      opts   = e as <%= entity %>ResolveOptions<S> | undefined;
+      opts   = e as UserResolveOptions<S> | undefined;
     } else {
       // (ctx, 'Entity', filter?, custom?, opts?)  ← smoke test form
-      ctor   = Domain<%= entity %> as unknown as new (...args: never[]) => T;
+      ctor   = DomainUser as unknown as new (...args: never[]) => T;
       filter = b as FilterInput | undefined;
       custom = c as CustomOpRegistry | undefined;
-      opts   = d as <%= entity %>ResolveOptions<S> | undefined;
+      opts   = d as UserResolveOptions<S> | undefined;
     }
   }
 
@@ -648,7 +625,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
   }
 
   // Where (top-level)
-  const where: Prisma.<%= entity %>WhereInput = filter
+  const where: Prisma.UserWhereInput = filter
     ? buildWherePrisma(relMeta, meta, filter, custom)
     : {};
 
@@ -661,7 +638,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
   const take    = typeof opts?.query?.limit  === 'number' ? opts!.query!.limit  : undefined;
   const skip    = typeof opts?.query?.offset === 'number' ? opts!.query!.offset : undefined;
 
-  const args: Prisma.<%= entity %>FindManyArgs = {
+  const args: Prisma.UserFindManyArgs = {
     ...(Object.keys(where).length ? { where } : {}),
     ...(select ? { select } : {}),
     ...(orderBy ? { orderBy } : {}),
@@ -669,9 +646,9 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
     ...(typeof skip === 'number' ? { skip } : {}),
   };
 
-  const rows = await ctx.client.<%- lcEntity %>.findMany(args);
+  const rows = await ctx.client.user.findMany(args);
 
   if (shape === 'entity') return rows;
   // Prisma already projects by select → reuse payload as "plain"
-  return rows as unknown as <%= entity %>Plain<S, T>[];
+  return rows as unknown as UserPlain<S, T>[];
 }

@@ -14,17 +14,26 @@ export function mikroOrmCtx(em: EntityManager): MikroOrmCtx {
     return { kind: 'mikroorm', em };
 }
 
-// ---- Prisma (placeholder so you can compile without @prisma/client) ----
-// You can refine this once you generate the Prisma adapter.
+// ---- Prisma ----
+import type { PrismaClient } from '@prisma/client';
+
 export interface PrismaCtx {
     kind: 'prisma';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    client: any; // replace with PrismaClient when you add prisma
+    client: PrismaClient;
 }
 
-// ---- Knex (placeholder) ----
+/** Wrap a PrismaClient to a driver ctx */
+export function prismaCtx(client: PrismaClient): PrismaCtx {
+    return { kind: 'prisma', client };
+}
+
+// ---- Knex (placeholder; keep it typed without `any`) ----
+export interface KnexLike {} // refine when you add knex
+
 export interface KnexCtx {
     kind: 'knex';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    knex: any;   // replace with Knex instance when you add knex
+    knex: KnexLike;
 }
+
+// ---- Common union (handy for adapters) ----
+export type OrmCtx = MikroOrmCtx | PrismaCtx | KnexCtx;

@@ -38,7 +38,7 @@ model User {
 
 model Address {
   id         String   @id @default(uuid())
-  street1    String
+  street1    String?
   street2    String?
   postalCode String
   city       String

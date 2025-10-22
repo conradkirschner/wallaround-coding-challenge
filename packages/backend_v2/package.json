@@ -6,7 +6,7 @@
     "start": "tsx src/index.ts",
     "codegen:filters": "tsx scripts/generate-filter-queries.ts",
     "codegen:filters:microorm": "FILTER_BUILDERS=mikroorm DEBUG_FILTER_CODEGEN=1 npm run codegen:filters",
-    "codegen:filters:prims": "FILTER_BUILDERS=prisma DEBUG_FILTER_CODEGEN=1 npm run codegen:filters",
+    "codegen:filters:prisma": "FILTER_BUILDERS=prisma DEBUG_FILTER_CODEGEN=1 npm run codegen:filters",
     "db:microorm:reset": "tsx scripts/microorm/db-reset.ts",
     "db:microorm:seed": "tsx scripts/microorm/db-seed.ts",
     "db:microorm:reseed": "npm run db:microorm:reset && npm run db:microorm:seed",

@@ -16,13 +16,10 @@ export type Operator =
 export type FilterableDef = Readonly<{
     type: FieldType;
     operators: readonly Operator[];
-    enumValues?: readonly string[];
+    enumValues?: string[];
 }>;
 
-/**
- * Flat map of dotted-path → filterable definition.
- * Example keys: 'age', 'createdAt', 'address.city', 'address.postalCode'
- */
+/** Flat map of dotted-path → filterable definition. */
 export type FilterableMap = Readonly<Record<string, FilterableDef>>;
 
 /** Relation quantifier semantics for to-many/n:n (Prisma) */
@@ -30,17 +27,17 @@ export type Quantifier = 'some' | 'every' | 'none';
 
 /** Per-entity relation metadata used by adapters (Prisma, etc.) */
 export type RelationMeta = Readonly<Record<
-    string, // relation root (property name on the entity)
+    string,
     Readonly<{
-        kind: 'one' | 'many';           // 1:1 vs 1:n / n:n
-        defaultQuantifier?: Quantifier; // used when not explicitly specified in a path (e.g. posts.title)
+        kind: 'one' | 'many';
+        defaultQuantifier?: Quantifier;
     }>
 >>;
 
 /** ====== Metadata keys ====== */
-const M_FILTERABLE_FIELDS = Symbol.for('filterable:fields');    // Map<string, FilterableDef>
-const M_RELATION_IMPORTS  = Symbol.for('filterable:imports');   // Map<string, { target: Function; depth: number }>
-const M_RELATION_META     = Symbol.for('filterable:relations'); // RelationMeta
+const M_FILTERABLE_FIELDS = Symbol.for('filterable:fields');     // Map<string, FilterableDef>
+const M_RELATION_IMPORTS  = Symbol.for('filterable:imports');    // Map<string, { getTarget: () => Function; depth: number }>
+const M_RELATION_META     = Symbol.for('filterable:relations');  // RelationMeta
 
 /** Utility — get or create metadata container */
 function ensureMeta<T extends object>(target: object, key: symbol, init: T): T {
@@ -53,22 +50,13 @@ function ensureMeta<T extends object>(target: object, key: symbol, init: T): T {
 /** Mark a scalar field as filterable with the allowed operator set */
 export function Filterable(config: { type: FieldType; operators: readonly Operator[]; enumValues?: readonly string[] }) {
     return (proto: object, propertyKey: string | symbol) => {
-        const ctor = (proto as { constructor: Function }).constructor;
+        const ctor = proto.constructor;
         const map = ensureMeta<Map<string, FilterableDef>>(ctor, M_FILTERABLE_FIELDS, new Map());
-
-        // Freeze arrays so their types are readonly at compile time and immutable at runtime.
-        const operators = Object.freeze([...(config.operators ?? [])]) as readonly Operator[];
-
-        // Only include `enumValues` key when present (avoid setting it to undefined with exactOptionalPropertyTypes).
-        const entry: FilterableDef = {
+        map.set(String(propertyKey), {
             type: config.type,
-            operators,
-            ...(config.enumValues
-                ? { enumValues: Object.freeze([...(config.enumValues)]) as readonly string[] }
-                : {}),
-        };
-
-        map.set(String(propertyKey), entry);
+            operators: Object.freeze([...(config.operators)]) as readonly Operator[],
+            ...(config.enumValues ? { enumValues: Object.freeze([...(config.enumValues)]) as string[] } : {}),
+        });
     };
 }
 
@@ -87,18 +75,18 @@ export function FilterableRelation(
     getTarget: () => Function,
     opts: Readonly<{
         kind: 'one' | 'many';
-        depth: number; // how deep to import nested @Filterable from the target
+        depth: number;
         defaultQuantifier?: Quantifier;
     }>,
 ) {
     return (proto: object, propertyKey: string | symbol) => {
-        const ctor = (proto as { constructor: Function }).constructor;
-        const relImports = ensureMeta<Map<string, { target: Function; depth: number }>>(
-            ctor,
-            M_RELATION_IMPORTS,
-            new Map(),
+        const ctor = proto.constructor;
+
+        // IMPORTANT: store the factory lazily to avoid circular-init issues
+        const relImports = ensureMeta<Map<string, { getTarget: () => Function; depth: number }>>(
+            ctor, M_RELATION_IMPORTS, new Map(),
         );
-        relImports.set(String(propertyKey), { target: getTarget(), depth: opts.depth });
+        relImports.set(String(propertyKey), { getTarget, depth: opts.depth });
 
         const relMeta = ensureMeta<RelationMeta>(ctor, M_RELATION_META, {});
         (relMeta as Record<string, unknown>)[String(propertyKey)] = {
@@ -115,26 +103,23 @@ export function getFilterableRelationsMeta(ctor: Function): RelationMeta {
 
 /** Retrieve the flat filterable map (including dotted imports from relations) */
 export function getFilterableMetadata(ctor: Function): FilterableMap {
-    // 1) Start with own scalar fields
-    const own =
-        (Reflect.getOwnMetadata(M_FILTERABLE_FIELDS, ctor) as Map<string, FilterableDef>) ?? new Map();
+    // 1) Own scalar fields
+    const own = (Reflect.getOwnMetadata(M_FILTERABLE_FIELDS, ctor) as Map<string, FilterableDef>) ?? new Map();
 
     const out: Record<string, FilterableDef> = {};
     for (const [k, v] of own.entries()) out[k] = v;
 
-    // 2) Expand relations imports into dotted paths
-    const relImports =
-        (Reflect.getOwnMetadata(M_RELATION_IMPORTS, ctor) as Map<
-            string,
-            { target: Function; depth: number }
-        >) ?? new Map();
-
-    for (const [root, { target, depth }] of relImports.entries()) {
+    // 2) Expand relations lazily (resolve target now, not at decoration time)
+    const relImports = (Reflect.getOwnMetadata(M_RELATION_IMPORTS, ctor) as Map<string, { getTarget: () => Function; depth: number }>) ?? new Map();
+    for (const [root, { getTarget, depth }] of relImports.entries()) {
         if (depth <= 0) continue;
 
-        const child = getFilterableMetadata(target);
+        // Lazily resolve the target constructor here
+        const targetCtor = getTarget();
+        const child = getFilterableMetadata(targetCtor);
+
+        // Depth=1 import: root.field → dotted paths
         for (const [k, v] of Object.entries(child)) {
-            // Depth=1 only; extend if you later need deeper import trees.
             out[`${root}.${k}`] = v;
         }
     }

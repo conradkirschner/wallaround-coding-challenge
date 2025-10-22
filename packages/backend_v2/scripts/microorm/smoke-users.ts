@@ -1,37 +1,13 @@
-// scripts/smoke-users.ts
+// scripts/mikroorm/smoke-users.ts
 import 'reflect-metadata';
-import {MikroORM, OptionalProps} from '@mikro-orm/core';
+import { MikroORM } from '@mikro-orm/core';
 import config from '../../src/mikro-orm.config';
-import {User} from '../../src/domain/user.entity';
-import type {FilterInput} from '../../src/filtering/ast';
+import { User } from '../../src/domain/user.entity';
+import type { FilterInput } from '../../src/filtering/ast';
 import { mikroOrmCtx } from '../../src/filtering/runtime/driver';
 
 // auto-generated (MikroORM adapter)
-import {resolveUser as resolveUsers} from '../../src/generated/mikroorm/UserResolver';
-
-/** Pretty-print only selected fields from an entity graph. */
-function project<T extends object>(row: T, select: readonly string[]): Record<string, unknown> {
-    const out: Record<string, unknown> = {};
-    for (const path of select) {
-        const parts = path.split('.');
-        let src: unknown = row;
-        let dst: Record<string, unknown> = out;
-
-        for (let i = 0; i < parts.length; i++) {
-            const key = parts[i]!;
-            if (src == null || typeof src !== 'object') break;
-
-            if (i === parts.length - 1) {
-                dst[key] = (src as Record<string, unknown>)[key];
-            } else {
-                dst[key] = dst[key] ?? {};
-                dst = dst[key] as Record<string, unknown>;
-                src = (src as Record<string, unknown>)[key];
-            }
-        }
-    }
-    return out;
-}
+import { resolveUser as resolveUsers } from '../../src/generated/mikroorm/UserResolver';
 
 /** Narrow shape for FilterError we throw from validate() */
 type FilterErrShape = {
@@ -42,20 +18,20 @@ type FilterErrShape = {
 
 async function main() {
     const orm = await MikroORM.init(config);
-    const em = orm.em.fork();
     const ctx = mikroOrmCtx(orm.em.fork());
-    
+
     // 1) Compound filter: age >= 30 AND (role == 'admin' OR isActive == false)
     const filter1: FilterInput = {
         and: [
             { field: 'age', op: 'gte', value: 30 },
-            { or: [
+            {
+                or: [
                     { field: 'role', op: 'eq', value: 'admin' },
                     { field: 'isActive', op: 'eq', value: false },
-                ]},
+                ],
+            },
         ],
     };
-
     const select1 = ['email', 'displayName', 'age', 'role', 'isActive', 'createdAt'] as const;
     const results1 = await resolveUsers(ctx, User, filter1, undefined, {
         limits: { maxDepth: 6, maxNodes: 200, maxInSize: 500 },
@@ -68,9 +44,9 @@ async function main() {
         security: { requireSelectableForFilter: true },
     });
     console.log('─ Filter 1 -> Users (projected):');
-    console.log(results1);
+    console.log(JSON.stringify(results1));
 
-    // 2) Relation filter: address.city CONTAINS 'Ber' AND age >= 18
+    // 2) Relation filter (1:1): address.city CONTAINS 'Ber' AND age >= 18
     const filter2: FilterInput = {
         and: [
             { field: 'address.city', op: 'contains', value: 'Ber' },
@@ -83,7 +59,7 @@ async function main() {
         security: { requireSelectableForFilter: true },
     });
     console.log('─ Filter 2 (address.city contains "Ber") -> Users (projected):');
-    console.log(results2);
+    console.log(JSON.stringify(results2));
 
     // 3) Enum IN + numeric: role in [admin,editor] AND age < 40
     const filter3: FilterInput = {
@@ -98,7 +74,7 @@ async function main() {
         security: { requireSelectableForFilter: true },
     });
     console.log('─ Filter 3 (role in [admin,editor] & age < 40) -> Users (projected):');
-    console.log(results3);
+    console.log(JSON.stringify(results3));
 
     // 4) Date BETWEEN (created in 2024)
     const filter4: FilterInput = {
@@ -110,17 +86,23 @@ async function main() {
         security: { requireSelectableForFilter: true },
     });
     console.log('─ Filter 4 (createdAt between 2024-01-01 and 2024-12-31) -> Users (projected):');
-    console.log(results4);
+    console.log(JSON.stringify(results4));
 
     // 5) Null check on nested optional field (address.street2 is null)
+    const select5 = ['email', 'address.street2', 'address.street1', 'address.city', 'address.country'] as const;
     const results5 = await resolveUsers(ctx, User, { field: 'address.street2', op: 'is_null' }, undefined, {
-        query: { select: ['email', 'address.street2', 'address.street1', "address.city", "address.country"], sort: [{ field: 'email', direction: 'asc' }] },
+        query: { select: select5, sort: [{ field: 'email', direction: 'asc' }] },
         security: { requireSelectableForFilter: true },
     });
     console.log('─ Filter 5 (address.street2 is null) -> Users (projected):');
-    console.log(results5[0]?.address.city);
+    console.log(JSON.stringify(results5));
+    // Assert shape is trimmed (no deep cycles)
+    if (results5[0]?.address) {
+        const a: any = results5[0].address;
+        console.log('   address object keys =', Object.keys(a)); // should only be the selected fields under 'address'
+    }
 
-    // 6) Pagination with a SINGLE CONDITION (now valid): { field: 'age', op: 'gte', value: 18 }
+    // 6) Pagination with a SINGLE CONDITION
     const paginatedFilter: FilterInput = { field: 'age', op: 'gte', value: 18 };
     const select6 = ['email', 'createdAt'] as const;
     const page1 = await resolveUsers(ctx, User, paginatedFilter, undefined, {
@@ -131,14 +113,14 @@ async function main() {
         query: { select: select6, sort: [{ field: 'createdAt', direction: 'asc' }], limit: 1, offset: 1 },
         security: { requireSelectableForFilter: true },
     });
-    console.log('─ Pagination: page 1 ->', page1);
-    console.log('─ Pagination: page 2 ->', page2);
+    console.log('─ Pagination: page 1 ->', JSON.stringify(page1));
+    console.log('─ Pagination: page 2 ->', JSON.stringify(page2));
 
-    // 7) INVALID FILTERS — we should see which field failed in error.meta.field
+    // 7) INVALID FILTERS — we should see field/op in error meta
 
     // 7a) Operator not allowed for field (age does not support 'contains')
     try {
-        const bad1: FilterInput = { field: 'age', op: 'contains', value: '30' as unknown as number };
+        const bad1: FilterInput = { field: 'age', op: 'contains', value: '30'  };
         await resolveUsers(ctx, User, bad1, undefined, {
             query: { select: ['email'] as const },
             security: { requireSelectableForFilter: true },
@@ -151,7 +133,7 @@ async function main() {
 
     // 7b) Type mismatch (age eq "thirty")
     try {
-        const bad2: FilterInput = { field: 'age', op: 'eq', value: 'thirty' as unknown as number };
+        const bad2: FilterInput = { field: 'age', op: 'eq', value: 'thirty'  };
         await resolveUsers(ctx, User, bad2, undefined, {
             query: { select: ['email'] as const },
             security: { requireSelectableForFilter: true },
@@ -161,6 +143,41 @@ async function main() {
         const fe = e as FilterErrShape;
         console.log('✔ Expected value-type error:', fe.code, fe.message, 'field=', fe.meta?.field);
     }
+
+    // 8) NEW: 1:n relation (posts) — default quantifier (SOME) — title contains 'Hello' AND published == true
+    const filter8: FilterInput = {
+        and: [
+            { field: 'posts.title', op: 'contains', value: 'Hello' },
+            { field: 'posts.published', op: 'eq', value: true },
+        ],
+    };
+    const select8 = ['email', 'posts.title', 'posts.published'] as const;
+    const results8 = await resolveUsers(ctx, User, filter8, undefined, {
+        query: { select: select8, sort: [{ field: 'email', direction: 'asc' }] },
+        security: { requireSelectableForFilter: true },
+    });
+    console.log('─ Filter 8 (posts.title contains "Hello" & posts.published == true) -> Users (projected):');
+    console.log(JSON.stringify(results8));
+    // Verify posts array items are trimmed (no .content, no .createdAt)
+    if (results8[0]?.posts) {
+        console.log('   first user posts[0] keys =', Object.keys((results8[0]).posts));
+    }
+
+    // 9) Cross relations: address.city == 'Berlin' AND posts.published == true
+    const filter9: FilterInput = {
+        and: [
+            { field: 'address.city', op: 'eq', value: 'Berlin' },
+            { field: 'posts.published', op: 'eq', value: true },
+        ],
+    };
+    const select9 = ['email', 'address.city', 'posts.title', 'posts.published'] as const;
+    const results9 = await resolveUsers(ctx, User, filter9, undefined, {
+        query: { select: select9, sort: [{ field: 'email', direction: 'asc' }] },
+        security: { requireSelectableForFilter: true },
+        shape: 'entity'
+    });
+    console.log('─ Filter 9 (address.city=="Berlin" & posts.published==true) -> Users (projected):');
+    console.log(JSON.stringify(results9));
 
     await orm.close(true);
 }

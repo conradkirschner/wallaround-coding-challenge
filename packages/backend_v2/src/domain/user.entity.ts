@@ -25,11 +25,6 @@ export enum Role {
     Editor = 'editor',
 }
 
-const NUMBER_OPS  = ['eq','neq','gt','gte','lt','lte','between','in','is_null','is_not_null'] as const;
-const ENUM_OPS    = ['eq','neq','in','is_null','is_not_null'] as const;
-const BOOLEAN_OPS = ['eq','neq','is_null','is_not_null'] as const;
-const DATE_OPS    = ['eq','neq','gt','gte','lt','lte','between','in','is_null','is_not_null'] as const;
-
 @Entity({ tableName: 'users' })
 @Index({ properties: ['age'] })
 @Index({ properties: ['role'] })
@@ -52,17 +47,17 @@ export class User {
     displayName!: string;
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'number', operators: NUMBER_OPS })
+    @Filterable({ type: 'number', operators: ['eq','neq','gt','gte','lt','lte','between','in'] })
     @Property({ type: 'number' })
     age!: number;
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'enum', operators: ENUM_OPS, enumValues: Object.values(Role) })
+    @Filterable({ type: 'enum', operators: ['eq','neq','in'], enumValues: Object.values(Role) })
     @MikroEnum(() => Role)
     role!: Role;
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'boolean', operators: BOOLEAN_OPS })
+    @Filterable({ type: 'boolean', operators: ['eq','neq'] })
     @Property({ type: 'boolean' })
     isActive!: boolean;
 
@@ -71,7 +66,7 @@ export class User {
     updatedAt: Date = new Date();
 
     @Selectable() @Sortable()
-    @Filterable({ type: 'date', operators: DATE_OPS })
+    @Filterable({ type: 'date', operators: ['eq','neq','gt','gte','lt','lte','between'] })
     @Property({ type: Date })
     createdAt: Date = new Date();
 

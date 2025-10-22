@@ -5,7 +5,12 @@ import { mkdirSync, readdirSync, statSync, writeFileSync, existsSync } from 'nod
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-import { getFilterableMetadata, getFilterableRelationsMeta, type FilterableMap, type RelationMeta } from '../src/filtering/filterable';
+import {
+    getFilterableMetadata,
+    getFilterableRelationsMeta,
+    type FilterableMap,
+    type RelationMeta,
+} from '../src/filtering/filterable';
 import { getSelectableFields } from '../src/filtering/expose';
 
 type Ctor<T = unknown> = new (...args: never[]) => T;
@@ -69,7 +74,6 @@ async function scanDomainEntities(): Promise<Ctor[]> {
             found.push(...ctors);
         }
     }
-    // de-dup by identity
     return Array.from(new Set(found));
 }
 
@@ -82,25 +86,15 @@ function runHygen(action: string, params: Record<string, string>) {
     if (res.status !== 0) throw new Error(`Hygen failed: filter-query ${action}`);
 }
 
-function fieldsJson(meta: Readonly<FilterableMap>): string {
-    return JSON.stringify(
-        Object.entries(meta).map(([name, def]) => ({
-            name,
-            type: def.type,
-            operators: def.operators,
-            enumValues: def.enumValues ?? [],
-        })),
-    );
-}
-
-/** Build typed select list and relation roots */
-function deriveSelectsAndRelations(ctor: Ctor, meta: Readonly<FilterableMap>): { selects: string[]; relations: string[] } {
-    // top-level selectable fields (from @Selectable)
-    const topLevelSelectable = Array.from(getSelectableFields(ctor) as ReadonlySet<string>);
-    // dotted fields from @FilterableRelation imports
+/** shared: derive selects & relation roots from decorators + filterable meta */
+function deriveSelectsAndRelations(
+    ctor: Ctor,
+    meta: Readonly<FilterableMap>,
+): { selects: string[]; relations: string[] } {
+    const selectable = getSelectableFields(ctor);
+    const topLevelSelectable = Array.isArray(selectable) ? selectable : Array.from(selectable as ReadonlySet<string>);
     const dotted = Object.keys(meta).filter((k) => k.includes('.'));
 
-    // relation roots = prefixes of dotted meta (before first dot), but only if the root is actually @Selectable
     const relationRoots = Array.from(
         new Set(
             dotted
@@ -109,38 +103,28 @@ function deriveSelectsAndRelations(ctor: Ctor, meta: Readonly<FilterableMap>): {
         ),
     );
 
-    // SELECTABLE = top-level selectable + dotted fields + relation roots (explicit population root)
     const all = Array.from(new Set([...topLevelSelectable, ...dotted, ...relationRoots]));
     return { selects: all.sort(), relations: relationRoots.sort() };
 }
 
-/** Per-ORM index: only re-export safe, entity-specific symbols to avoid name clashes */
+/** Per-ORM index: re-export safe, entity-specific symbols */
 function writeOrmIndex(dirAbs: string, entityNames: string[]) {
     const lines: string[] = [];
     lines.push('// AUTO-GENERATED FILE — per-ORM barrel with safe, entity-specific exports only.\n');
 
     for (const entity of entityNames.sort()) {
-        // Resolvers are expected to export entity-specific symbols:
-        //   resolve{Entity}, buildWhere (aliased), type aliases (aliased)
         const resolverPath = `./${entity}Resolver`;
-
-        // Functions
         lines.push(`export { resolve${entity} } from '${resolverPath}';`);
-        // Alias generic 'buildWhere' per-entity to avoid collisions in downstream barrels
-        lines.push(`export { buildWhere as buildWhere${entity} } from '${resolverPath}';`);
-
-        // Types (aliased)
-        lines.push(`export type { SelectField as ${entity}SelectField } from '${resolverPath}';`);
-        lines.push(`export type { RelationRoot as ${entity}RelationRoot } from '${resolverPath}';`);
-        lines.push(`export type { ResolveOptions as ${entity}ResolveOptions } from '${resolverPath}';`);
-
-        // If your template also exports a typed projection (e.g. SelectedUser<S>), you can add more aliases here.
+        // Types (align with your templates)
+        lines.push(`export type { ${entity}SelectField as ${entity}SelectField } from '${resolverPath}';`);
+        lines.push(`export type { ${entity}RelationRoot as ${entity}RelationRoot } from '${resolverPath}';`);
+        lines.push(`export type { ${entity}ResolveOptions as ${entity}ResolveOptions } from '${resolverPath}';`);
     }
 
     writeFileSync(path.join(dirAbs, 'index.ts'), lines.join('\n') + '\n', 'utf8');
 }
 
-/** Top-level index: expose builder namespaces without polluting the root with duplicate symbol names */
+/** Top-level index: expose builder namespaces */
 function writeTopLevelIndex(buildersPresent: string[]) {
     const lines: string[] = [];
     lines.push('// AUTO-GENERATED FILE — top-level barrel exporting per-ORM namespaces.\n');
@@ -178,21 +162,31 @@ async function main() {
         return;
     }
 
-    // Track which builders actually emitted output (for the top-level index)
     const buildersWithOutput = new Set<string>();
 
     // 4) generate per entity per builder
     for (const { ctor, name: entity, meta, relMeta } of selected) {
-        const fields = fieldsJson(meta);
         const { selects, relations } = deriveSelectsAndRelations(ctor, meta);
         const selectsJson     = JSON.stringify(selects);
         const relationsJson   = JSON.stringify(relations);
         const relationsMetaJs = JSON.stringify(relMeta);
 
         for (const builder of BUILDERS) {
-            const outAbs = path.join(OUT_ABS, builder);      // e.g. src/generated/mikroorm
+            const outAbs = path.join(OUT_ABS, builder);
             mkdirSync(outAbs, { recursive: true });
-            const outRel = path.relative(HYGEN_ROOT, outAbs); // pass relative path to Hygen
+            const outRel = path.relative(HYGEN_ROOT, outAbs);
+
+            // Dynamically load builder-specific field generation (no cross-deps!)
+            let fields: string;
+            if (builder === 'prisma') {
+                const { fieldsJsonForPrisma } = await import('./prisma/generator');
+                fields = await fieldsJsonForPrisma(entity, meta);
+            } else if (builder === 'mikroorm') {
+                const { fieldsJsonForMikro } = await import('./microorm/generator');
+                fields = await fieldsJsonForMikro(entity, ctor, meta);
+            } else {
+                throw new Error(`Unsupported builder "${builder}"`);
+            }
 
             log(
                 'run:', builder, 'entity=', entity,
@@ -208,7 +202,7 @@ async function main() {
                 fields,
                 selects: selectsJson,
                 relations: relationsJson,
-                relationsMeta: relationsMetaJs, // <-- Prisma adapter uses this (kind + defaultQuantifier)
+                relationsMeta: relationsMetaJs, // prisma resolver uses kind + defaultQuantifier
             });
 
             buildersWithOutput.add(builder);
