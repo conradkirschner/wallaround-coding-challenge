@@ -1,0 +1,74 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  user
+  editor
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  displayName String
+  age         Int
+  role        Role
+  isActive    Boolean
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 1:1 Address (optional)
+  address Address?
+
+  // 1:n Posts
+  posts Post[]
+
+  @@index([age])
+  @@index([role])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  street1    String
+  street2    String?
+  postalCode String
+  city       String
+  country    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // inverse of 1:1 to User
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String? @unique
+
+  @@index([city])
+  @@index([country])
+}
+
+// -------- Post (mirrors your MikroORM entity) --------
+model Post {
+  id        String   @id @default(uuid())
+  title     String
+  content   String? // nullable, matches @Property({ nullable: true })
+  published Boolean  @default(false) // default false
+  createdAt DateTime @default(now()) // default now()
+  updatedAt DateTime @updatedAt
+
+  // n:1 to User (author required)
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  // indexes to match your MikroORM @Index decorators
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([published])
+}

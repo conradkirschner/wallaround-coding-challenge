@@ -1,0 +1,26 @@
+// tsconfig.json
+{
+    "compilerOptions": {
+    "target": "ES2022",
+        "lib": ["ES2022"],
+        "module": "NodeNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "noEmit": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "useDefineForClassFields": false,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "exactOptionalPropertyTypes": true,
+        "forceConsistentCasingInFileNames": true,
+        "baseUrl": ".",
+        "types": ["node"]
+},
+    "include": ["src/**/*.ts", "scripts/**/*.ts"],
+    "exclude": ["node_modules", "dist", "_templates"]
+}
