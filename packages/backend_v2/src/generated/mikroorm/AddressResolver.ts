@@ -13,7 +13,7 @@ import { CustomOpRegistry, type IR } from 'src/filtering/custom-ops';
 import { validateFilter } from 'src/filtering/validate';
 import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
-import type { Expr } from './AddressFilterQuery';
+import type { AddressExpr as Expr   } from './AddressFilterQuery';
 import type { MikroOrmCtx } from 'src/filtering/runtime/driver';
 
 /** Compile-time selectability (entity-scoped) */
@@ -26,8 +26,8 @@ export type AddressSelectField = Fallback<typeof Address_SELECTABLE[number], str
 export const Address_RELATIONS = [] as const;
 export type AddressRelationRoot = Fallback<typeof Address_RELATIONS[number], string>;
 
-/** Operator set derived from @Filterable annotations (entity-scoped) */
-export const Address_OPS = ["contains","ends_with","eq","in","is_not_null","is_null","neq","starts_with"] as const;
+/** Operator set derived from @Filterable annotations (entity-scoped, merged with relation-safe ops) */
+export const Address_OPS = ["between","contains","ends_with","eq","gt","gte","in","is_not_null","is_null","lt","lte","neq","starts_with"] as const;
 /** Internal operator union for this resolver (kept un-exported to avoid cross-entity collisions) */
 type Operator = typeof Address_OPS[number];
 
@@ -76,7 +76,12 @@ function nest(path: string, payload: V): Expr {
   return acc as Expr;
 }
 
-/** IR → MikroORM Expr (only ops present in metadata) */
+/** Keep only defined, non-empty Expr objects (narrows to Expr) */
+function isNonEmptyExpr(x: Expr | undefined): x is Expr {
+  return !!x && Object.keys(x as Record<string, unknown>).length > 0;
+}
+
+/** IR → MikroORM Expr (full op matrix; per-field allow-list is enforced elsewhere) */
 function fromIR(ir: IR): Expr {
   if ('and' in ir) return mergeAnd(ir.and.map(fromIR));
   if ('or'  in ir) return mergeOr(ir.or.map(fromIR));
@@ -84,21 +89,29 @@ function fromIR(ir: IR): Expr {
   const f = ir.field ?? '__FIELD__';
   const dotted = f.includes('.');
 
-   if (ir.op === 'eq')  return dotted ? nest(f, ir.value as V) : wrapField(f, ir.value as V); 
-   if (ir.op === 'neq') return dotted ? nest(f, { $ne: ir.value as V } as V) : wrapField(f, { $ne: ir.value as V } as V); 
-  
-  
-  
-  
-   if (ir.op === 'in')  return dotted ? nest(f, { $in: ir.values as readonly V[] } as V) : wrapField(f, { $in: ir.values as readonly V[] } as V); 
-  
-   if (ir.op === 'contains')    return dotted ? nest(f, { $like: `%${likeEscape(String(ir.value))}%` } as V) : wrapField(f, { $like: `%${likeEscape(String(ir.value))}%` } as V); 
-   if (ir.op === 'starts_with') return dotted ? nest(f, { $like: `${likeEscape(String(ir.value))}%` } as V) : wrapField(f, { $like: `${likeEscape(String(ir.value))}%` } as V); 
-   if (ir.op === 'ends_with')   return dotted ? nest(f, { $like: `%${likeEscape(String(ir.value))}` } as V) : wrapField(f, { $like: `%${likeEscape(String(ir.value))}` } as V); 
-   if (ir.op === 'is_null')       return dotted ? nest(f, null as V) : wrapField(f, null as V); 
-   if (ir.op === 'is_not_null') return dotted ? nest(f, { $ne: null } as V) : wrapField(f, { $ne: null } as V); 
+  if (ir.op === 'eq')           return dotted ? nest(f, ir.value as V)                 : wrapField(f, ir.value as V);
+  if (ir.op === 'neq')          return dotted ? nest(f, { $ne: ir.value as V } as V)   : wrapField(f, { $ne: ir.value as V } as V);
+  if (ir.op === 'gt')           return dotted ? nest(f, { $gt: ir.value as V } as V)   : wrapField(f, { $gt: ir.value as V } as V);
+  if (ir.op === 'gte')          return dotted ? nest(f, { $gte: ir.value as V } as V)  : wrapField(f, { $gte: ir.value as V } as V);
+  if (ir.op === 'lt')           return dotted ? nest(f, { $lt: ir.value as V } as V)   : wrapField(f, { $lt: ir.value as V } as V);
+  if (ir.op === 'lte')          return dotted ? nest(f, { $lte: ir.value as V } as V)  : wrapField(f, { $lte: ir.value as V } as V);
+  if (ir.op === 'in')           return dotted ? nest(f, { $in: ir.values as readonly V[] } as V)
+                                              : wrapField(f, { $in: ir.values as readonly V[] } as V);
+  if (ir.op === 'between') {
+    const gte = dotted ? nest(f, { $gte: ir.a as V } as V) : wrapField(f, { $gte: ir.a as V } as V);
+    const lte = dotted ? nest(f, { $lte: ir.b as V } as V) : wrapField(f, { $lte: ir.b as V } as V);
+    return mergeAnd([gte, lte]);
+  }
+  if (ir.op === 'contains')     return dotted ? nest(f, { $like: `%${likeEscape(String(ir.value))}%` } as V)
+                                              : wrapField(f, { $like: `%${likeEscape(String(ir.value))}%` } as V);
+  if (ir.op === 'starts_with')  return dotted ? nest(f, { $like: `${likeEscape(String(ir.value))}%` } as V)
+                                              : wrapField(f, { $like: `${likeEscape(String(ir.value))}%` } as V);
+  if (ir.op === 'ends_with')    return dotted ? nest(f, { $like: `%${likeEscape(String(ir.value))}` } as V)
+                                              : wrapField(f, { $like: `%${likeEscape(String(ir.value))}` } as V);
+  if (ir.op === 'is_null')      return dotted ? nest(f, null as V) : wrapField(f, null as V);
+  if (ir.op === 'is_not_null')  return dotted ? nest(f, { $ne: null } as V) : wrapField(f, { $ne: null } as V);
 
-  throw Object.assign(new Error(`Operator '${(ir as { op: string }).op}' is not enabled by @Filterable metadata`), {
+  throw Object.assign(new Error(`Operator '${(ir as { op: string }).op}' cannot be mapped`), {
     code: 'FILTER_OPERATOR_UNSUPPORTED',
     operator: (ir as { op: string }).op,
     field: f,
@@ -111,7 +124,7 @@ function emitCondition(
   fieldType: FieldType,
   cond: ConditionNode,
   custom?: CustomOpRegistry,
-  defAllowed?: readonly Operator[],
+  defAllowed?: readonly string[], // per-field allow list straight from metadata
 ): Expr {
   const name = cond.op.toLowerCase();
 
@@ -130,33 +143,39 @@ function emitCondition(
     : undefined;
 
   if (field.includes('.')) {
-     if (name === 'eq')  return nest(field, v as V); 
-     if (name === 'neq') return nest(field, { $ne: v as V } as V); 
-    
-    
-    
-    
-     if (name === 'in')  return nest(field, { $in: v as readonly V[] } as V); 
-    
-     if (name === 'contains')    return nest(field, { $like: `%${likeEscape(String(v))}%` } as V); 
-     if (name === 'starts_with') return nest(field, { $like: `${likeEscape(String(v))}%` } as V); 
-     if (name === 'ends_with')   return nest(field, { $like: `%${likeEscape(String(v))}` } as V); 
-     if (name === 'is_null')       return nest(field, null as V); 
-     if (name === 'is_not_null') return nest(field, { $ne: null } as V); 
+    if (name === 'eq')           return nest(field, v as V);
+    if (name === 'neq')          return nest(field, { $ne: v as V } as V);
+    if (name === 'gt')           return nest(field, { $gt: v as V } as V);
+    if (name === 'gte')          return nest(field, { $gte: v as V } as V);
+    if (name === 'lt')           return nest(field, { $lt: v as V } as V);
+    if (name === 'lte')          return nest(field, { $lte: v as V } as V);
+    if (name === 'in')           return nest(field, { $in: v as readonly V[] } as V);
+    if (name === 'between') {
+      const [a, b] = v as readonly [Primitive, Primitive];
+      return mergeAnd([nest(field, { $gte: a as V } as V), nest(field, { $lte: b as V } as V)]);
+    }
+    if (name === 'contains')     return nest(field, { $like: `%${likeEscape(String(v))}%` } as V);
+    if (name === 'starts_with')  return nest(field, { $like: `${likeEscape(String(v))}%` } as V);
+    if (name === 'ends_with')    return nest(field, { $like: `%${likeEscape(String(v))}` } as V);
+    if (name === 'is_null')      return nest(field, null as V);
+    if (name === 'is_not_null')  return nest(field, { $ne: null } as V);
   } else {
-     if (name === 'eq')  return wrapField(field, v as V); 
-     if (name === 'neq') return wrapField(field, { $ne: v as V } as V); 
-    
-    
-    
-    
-     if (name === 'in')  return wrapField(field, { $in: v as readonly V[] } as V); 
-    
-     if (name === 'contains')    return wrapField(field, { $like: `%${likeEscape(String(v))}%` } as V); 
-     if (name === 'starts_with') return wrapField(field, { $like: `${likeEscape(String(v))}%` } as V); 
-     if (name === 'ends_with')   return wrapField(field, { $like: `%${likeEscape(String(v))}` } as V); 
-     if (name === 'is_null')       return wrapField(field, null as V); 
-     if (name === 'is_not_null') return wrapField(field, { $ne: null } as V); 
+    if (name === 'eq')           return wrapField(field, v as V);
+    if (name === 'neq')          return wrapField(field, { $ne: v as V } as V);
+    if (name === 'gt')           return wrapField(field, { $gt: v as V } as V);
+    if (name === 'gte')          return wrapField(field, { $gte: v as V } as V);
+    if (name === 'lt')           return wrapField(field, { $lt: v as V } as V);
+    if (name === 'lte')          return wrapField(field, { $lte: v as V } as V);
+    if (name === 'in')           return wrapField(field, { $in: v as readonly V[] } as V);
+    if (name === 'between') {
+      const [a, b] = v as readonly [Primitive, Primitive];
+      return mergeAnd([wrapField(field, { $gte: a as V } as V), wrapField(field, { $lte: b as V } as V)]);
+    }
+    if (name === 'contains')     return wrapField(field, { $like: `%${likeEscape(String(v))}%` } as V);
+    if (name === 'starts_with')  return wrapField(field, { $like: `${likeEscape(String(v))}%` } as V);
+    if (name === 'ends_with')    return wrapField(field, { $like: `%${likeEscape(String(v))}` } as V);
+    if (name === 'is_null')      return wrapField(field, null as V);
+    if (name === 'is_not_null')  return wrapField(field, { $ne: null } as V);
   }
 
   if (custom) {
@@ -212,8 +231,85 @@ function buildWhere(
   if (!def) {
     throw Object.assign(new Error(`Field '${node.field}' is not filterable`), { code: 'FILTER_FIELD_NOT_ALLOWED', field: node.field });
   }
-  const allowed = def.operators.filter((o): o is Operator => (<readonly string[]><unknown>Address_OPS).includes(o));
+
+  // IMPORTANT: use the field’s own operators from metadata; do not intersect with entity-only ops.
+  const allowed = def.operators as readonly string[];
   return emitCondition(node.field, def.type, node, custom, allowed);
+}
+
+/** ===== Relation-scoped populateWhere (per root) ===== */
+
+/** Leaf emitter for relation-scoped condition (tail inside relation item) */
+function emitRelationLeaf(
+  tailField: string,
+  fieldType: FieldType,
+  cond: ConditionNode,
+): Expr {
+  const name = cond.op.toLowerCase();
+  const hasValue = Object.prototype.hasOwnProperty.call(cond, 'value');
+  const v = hasValue
+    ? (cond as { value: Primitive | readonly Primitive[] | readonly [Primitive, Primitive] | undefined }).value
+    : undefined;
+
+  // Already inside relation item scope
+  if (name === 'eq')           return wrapField(tailField, v as V);
+  if (name === 'neq')          return wrapField(tailField, { $ne: v as V } as V);
+  if (name === 'gt')           return wrapField(tailField, { $gt: v as V } as V);
+  if (name === 'gte')          return wrapField(tailField, { $gte: v as V } as V);
+  if (name === 'lt')           return wrapField(tailField, { $lt: v as V } as V);
+  if (name === 'lte')          return wrapField(tailField, { $lte: v as V } as V);
+  if (name === 'in')           return wrapField(tailField, { $in: v as readonly V[] } as V);
+  if (name === 'between') {
+    const [a, b] = v as readonly [Primitive, Primitive];
+    return mergeAnd([wrapField(tailField, { $gte: a as V } as V), wrapField(tailField, { $lte: b as V } as V)]);
+  }
+  if (name === 'contains')     return wrapField(tailField, { $like: `%${likeEscape(String(v))}%` } as V);
+  if (name === 'starts_with')  return wrapField(tailField, { $like: `${likeEscape(String(v))}%` } as V);
+  if (name === 'ends_with')    return wrapField(tailField, { $like: `%${likeEscape(String(v))}` } as V);
+  if (name === 'is_null')      return wrapField(tailField, null as V);
+  if (name === 'is_not_null')  return wrapField(tailField, { $ne: null } as V);
+
+  // unsupported here
+  return {};
+}
+
+/** Prune filter AST to a single relation root and build a MikroORM filter for that relation model */
+function buildRelationWhereForRoot(
+  meta: Readonly<FilterableMap>,
+  root: string,
+  node: FilterNode,
+): Expr | undefined {
+  if (isGroup(node)) {
+    const children = ('and' in node ? node.and : node.or)
+      .map((c) => buildRelationWhereForRoot(meta, root, c))
+      .filter(isNonEmptyExpr);
+
+    if (children.length === 0) return undefined;
+    if (children.length === 1) return children[0]!;
+    return ('and' in node) ? mergeAnd(children) : mergeOr(children);
+  }
+
+  if (!node.field.startsWith(root + '.')) return undefined;
+
+  const tail = node.field.slice(root.length + 1);
+  const def  = meta[node.field];
+  if (!def) return undefined;
+
+  return emitRelationLeaf(tail, def.type, node);
+}
+
+/** Build populateWhere map for find options */
+function buildPopulateWhereMap(
+  meta: Readonly<FilterableMap>,
+  filter?: FilterInput,
+): Partial<Record<AddressRelationRoot, Expr>> {
+  if (!filter) return {};
+  const out: Partial<Record<AddressRelationRoot, Expr>> = {};
+  for (const root of Address_RELATIONS as readonly AddressRelationRoot[]) {
+    const w = buildRelationWhereForRoot(meta, root, filter);
+    if (w && Object.keys(w).length > 0) out[root] = w;
+  }
+  return out;
 }
 
 /** Ensure we don't use the global EM context */
@@ -381,12 +477,18 @@ export async function resolveAddress<T extends object, S extends readonly Addres
 
   const { populate, fields } = buildPopulateAndFields(select);
 
+  // Relation-scoped populateWhere derived from the same filter AST
+  const populateWhereMap = buildPopulateWhereMap(meta, filter);
+
   const findOptions = {
     ...(typeof opts?.query?.limit === 'number'  ? { limit:  opts.query.limit }  : {}),
     ...(typeof opts?.query?.offset === 'number' ? { offset: opts.query.offset } : {}),
     ...(orderByRecord ? { orderBy: orderByRecord as NonNullable<FindOptions<T>['orderBy']> } : {}),
     ...(populate      ? { populate: populate     as NonNullable<FindOptions<T>['populate']> } : {}),
     ...(fields        ? { fields:   fields       as NonNullable<FindOptions<T>['fields']> }   : {}),
+    ...(Object.keys(populateWhereMap).length
+        ? { populateWhere: populateWhereMap as unknown as NonNullable<FindOptions<T>['populateWhere']> }
+        : {}),
   } satisfies FindOptions<T>;
 
   const rows = await em.find<T>(entityName, where, findOptions);
@@ -395,34 +497,65 @@ export async function resolveAddress<T extends object, S extends readonly Addres
     return rows;
   }
 
-  // Project to *only* the requested fields (plain shape)
-  const picked = (() => {
-    const sel = (select as readonly string[]) ?? [];
-    if (sel.length === 0) return rows.map(() => ({} as any));
+  /* ========= plain-shape projection (arrays + MikroORM Collections) ========= */
 
-    const out: any[] = [];
-    for (const row of rows as unknown as Record<string, any>[]) {
-      const rec: Record<string, any> = {};
-      for (const path of sel) {
-        const parts = path.split('.');
-        let src: any = row;
-        let dst: Record<string, any> = rec;
-        for (let i = 0; i < parts.length; i++) {
-          const key = parts[i]!;
-          if (src == null || typeof src !== 'object') break;
-          if (i === parts.length - 1) {
-            dst[key] = src[key];
+  function isRecord(v: unknown): v is Record<string, unknown> {
+    return typeof v === 'object' && v !== null;
+  }
+  function asArray(v: unknown): unknown[] | null {
+    if (Array.isArray(v)) return v;
+    // MikroORM Collection duck-typing
+    if (v && typeof v === 'object' && typeof (v as any).toArray === 'function') {
+      try { return (v as any).toArray(); } catch { /* ignore */ }
+    }
+    return null;
+  }
+
+  function projectRow(row: object, paths: readonly string[]): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+
+    for (const fullPath of paths) {
+      const keys = fullPath.split('.');
+      let src: unknown = row;
+      let dst: Record<string, unknown> = out;
+
+      for (let i = 0; i < keys.length; i++) {
+        const k = keys[i]!;
+        if (!isRecord(src)) break;
+
+        const isLast = i === keys.length - 1;
+        const next = (src as any)[k];
+
+        if (isLast) {
+          const maybeArr = asArray(src);
+          if (maybeArr) {
+            dst[k] = maybeArr.map((item) => (isRecord(item) ? (item as any)[k] : undefined));
           } else {
-            if (dst[key] == null || typeof dst[key] !== 'object') dst[key] = {};
-            dst = dst[key] as Record<string, any>;
-            src = src[key];
+            dst[k] = next;
           }
+          continue;
+        }
+
+        const arr = asArray(next);
+        if (arr) {
+          const tail = keys.slice(i + 1).join('.');
+          dst[k] = arr.map((item) => projectRow(item as object, [tail]));
+          break;
+        } else {
+          if (!isRecord(dst[k])) dst[k] = {};
+          dst = dst[k] as Record<string, unknown>;
+          src = next;
         }
       }
-      out.push(rec);
     }
+
     return out;
-  })() as AddressPlain<S, T>[];
+  }
+
+  const selPaths = (select as readonly string[]) ?? [];
+  const picked = (rows as unknown as object[]).map((row) =>
+    selPaths.length ? projectRow(row, selPaths) : ({} as Record<string, unknown>)
+  ) as AddressPlain<S, T>[];
 
   return picked;
 }

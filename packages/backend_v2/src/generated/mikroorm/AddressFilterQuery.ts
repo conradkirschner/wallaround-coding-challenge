@@ -48,8 +48,8 @@ export namespace AddressFilterQueryMikroORM {
     contains: (s: string): Expr => ({ street1: { $like: `%${likeEscape(s)}%` } }),
     starts_with: (s: string): Expr => ({ street1: { $like: `${likeEscape(s)}%` } }),
     ends_with: (s: string): Expr => ({ street1: { $like: `%${likeEscape(s)}` } }),
-    is_null: (): Expr => ({ street1: null }),
-    is_not_null: (): Expr => ({ street1: { $ne: null } }),
+    
+    
   } as const;
 
   
@@ -92,8 +92,8 @@ export namespace AddressFilterQueryMikroORM {
     contains: (s: string): Expr => ({ postalCode: { $like: `%${likeEscape(s)}%` } }),
     starts_with: (s: string): Expr => ({ postalCode: { $like: `${likeEscape(s)}%` } }),
     ends_with: (s: string): Expr => ({ postalCode: { $like: `%${likeEscape(s)}` } }),
-    is_null: (): Expr => ({ postalCode: null }),
-    is_not_null: (): Expr => ({ postalCode: { $ne: null } }),
+    
+    
   } as const;
 
   
@@ -114,8 +114,8 @@ export namespace AddressFilterQueryMikroORM {
     contains: (s: string): Expr => ({ city: { $like: `%${likeEscape(s)}%` } }),
     starts_with: (s: string): Expr => ({ city: { $like: `${likeEscape(s)}%` } }),
     ends_with: (s: string): Expr => ({ city: { $like: `%${likeEscape(s)}` } }),
-    is_null: (): Expr => ({ city: null }),
-    is_not_null: (): Expr => ({ city: { $ne: null } }),
+    
+    
   } as const;
 
   
@@ -136,8 +136,8 @@ export namespace AddressFilterQueryMikroORM {
     contains: (s: string): Expr => ({ country: { $like: `%${likeEscape(s)}%` } }),
     starts_with: (s: string): Expr => ({ country: { $like: `${likeEscape(s)}%` } }),
     ends_with: (s: string): Expr => ({ country: { $like: `%${likeEscape(s)}` } }),
-    is_null: (): Expr => ({ country: null }),
-    is_not_null: (): Expr => ({ country: { $ne: null } }),
+    
+    
   } as const;
 
   

@@ -48,8 +48,8 @@ export namespace UserFilterQueryMikroORM {
     
     
     
-    is_null: (): Expr => ({ age: null }),
-    is_not_null: (): Expr => ({ age: { $ne: null } }),
+    
+    
   } as const;
 
   
@@ -71,8 +71,8 @@ export namespace UserFilterQueryMikroORM {
     
     
     
-    is_null: (): Expr => ({ role: null }),
-    is_not_null: (): Expr => ({ role: { $ne: null } }),
+    
+    
   } as const;
 
   
@@ -93,8 +93,8 @@ export namespace UserFilterQueryMikroORM {
     
     
     
-    is_null: (): Expr => ({ isActive: null }),
-    is_not_null: (): Expr => ({ isActive: { $ne: null } }),
+    
+    
   } as const;
 
   
@@ -110,13 +110,13 @@ export namespace UserFilterQueryMikroORM {
     gte: (v: T_createdAt): Expr => ({ createdAt: { $gte: v } }),
     lt: (v: T_createdAt): Expr => ({ createdAt: { $lt: v } }),
     lte: (v: T_createdAt): Expr => ({ createdAt: { $lte: v } }),
-    in: (values: ReadonlyArray<T_createdAt>): Expr => ({ createdAt: { $in: values as readonly Value[] } }),
+    
     between: (a: T_createdAt, b: T_createdAt): Expr => AND([{ createdAt: { $gte: a } }, { createdAt: { $lte: b } }]),
     
     
     
-    is_null: (): Expr => ({ createdAt: null }),
-    is_not_null: (): Expr => ({ createdAt: { $ne: null } }),
+    
+    
   } as const;
 
   
