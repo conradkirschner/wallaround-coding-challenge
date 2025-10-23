@@ -353,7 +353,7 @@ function getScopedEm(ctx: MikroOrmCtx) {
     const maybe = ctx.em as MikroOrmCtx['em'] & { getContext?: () => void };
     if (typeof maybe.getContext === 'function') { maybe.getContext(); return ctx.em; }
   } catch { /* ignore */ }
-  return ctx.em.fork();
+  throw new Error("Dont use the global Enitity Manager!")
 }
 
 /**
@@ -526,7 +526,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
         : {}),
   } satisfies FindOptions<T>;
 
-  const rows = await em.find<T>(entityName, where, findOptions);
+  const rows = await ctx.em.find<T>(entityName, where, findOptions);
 
   if (shape === 'entity') {
     return rows;
