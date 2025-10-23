@@ -1,0 +1,512 @@
+openapi: 3.1.0
+info:
+  title: Example API
+  version: 1.2.3
+paths:
+  /v1/knex/users:
+    get:
+      operationId: GetV1KnexUsers
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          description: GET /v1/knex/users Parameter
+          schema:
+            anyOf:
+              - $ref: "#/components/schemas/Schema1"
+              - type: object
+                properties: {}
+                additionalProperties: false
+              - type: string
+      responses:
+        "200":
+          description: GET /v1/knex/users Positive response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: success
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                            email:
+                              type: string
+                              format: email
+                              pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+                            displayName:
+                              type: string
+                            age:
+                              type: number
+                            role:
+                              type: string
+                              enum:
+                                - admin
+                                - user
+                                - editor
+                            isActive:
+                              type: boolean
+                            createdAt:
+                              anyOf:
+                                - {}
+                                - type: string
+                            updatedAt:
+                              anyOf:
+                                - {}
+                                - type: string
+                            address:
+                              type: object
+                              properties:
+                                city:
+                                  type: string
+                                country:
+                                  type: string
+                                postalCode:
+                                  type: string
+                                street1:
+                                  type: string
+                                street2:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                createdAt:
+                                  anyOf:
+                                    - {}
+                                    - type: string
+                                updatedAt:
+                                  anyOf:
+                                    - {}
+                                    - type: string
+                              additionalProperties: false
+                            posts:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                    format: uuid
+                                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                                  title:
+                                    type: string
+                                  content:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                  published:
+                                    type: boolean
+                                  createdAt:
+                                    anyOf:
+                                      - {}
+                                      - type: string
+                                  updatedAt:
+                                    anyOf:
+                                      - {}
+                                      - type: string
+                                additionalProperties: false
+                          additionalProperties: false
+                    required:
+                      - data
+                    additionalProperties: false
+                required:
+                  - status
+                  - data
+                additionalProperties: false
+        "400":
+          description: GET /v1/knex/users Negative response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: error
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                    required:
+                      - message
+                    additionalProperties: false
+                required:
+                  - status
+                  - error
+                additionalProperties: false
+              examples:
+                example1:
+                  value:
+                    status: error
+                    error:
+                      message: Sample error message
+    head:
+      operationId: HeadV1KnexUsers
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          description: HEAD /v1/knex/users Parameter
+          schema:
+            anyOf:
+              - $ref: "#/components/schemas/Schema2"
+              - type: object
+                properties: {}
+                additionalProperties: false
+              - type: string
+      responses:
+        "200":
+          description: HEAD /v1/knex/users Positive response
+        "400":
+          description: HEAD /v1/knex/users Negative response
+    post:
+      operationId: PostV1KnexUsers
+      requestBody:
+        description: POST /v1/knex/users Request body
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter:
+                  anyOf:
+                    - $ref: "#/components/schemas/Schema3"
+                    - type: object
+                      properties: {}
+                      additionalProperties: false
+                    - type: string
+      responses:
+        "200":
+          description: POST /v1/knex/users Positive response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: success
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                            email:
+                              type: string
+                              format: email
+                              pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+                            displayName:
+                              type: string
+                            age:
+                              type: number
+                            role:
+                              type: string
+                              enum:
+                                - admin
+                                - user
+                                - editor
+                            isActive:
+                              type: boolean
+                            createdAt:
+                              anyOf:
+                                - {}
+                                - type: string
+                            updatedAt:
+                              anyOf:
+                                - {}
+                                - type: string
+                            address:
+                              type: object
+                              properties:
+                                city:
+                                  type: string
+                                country:
+                                  type: string
+                                postalCode:
+                                  type: string
+                                street1:
+                                  type: string
+                                street2:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                createdAt:
+                                  anyOf:
+                                    - {}
+                                    - type: string
+                                updatedAt:
+                                  anyOf:
+                                    - {}
+                                    - type: string
+                              additionalProperties: false
+                            posts:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                    format: uuid
+                                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                                  title:
+                                    type: string
+                                  content:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                  published:
+                                    type: boolean
+                                  createdAt:
+                                    anyOf:
+                                      - {}
+                                      - type: string
+                                  updatedAt:
+                                    anyOf:
+                                      - {}
+                                      - type: string
+                                additionalProperties: false
+                          additionalProperties: false
+                    required:
+                      - data
+                    additionalProperties: false
+                required:
+                  - status
+                  - data
+                additionalProperties: false
+        "400":
+          description: POST /v1/knex/users Negative response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: error
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                    required:
+                      - message
+                    additionalProperties: false
+                required:
+                  - status
+                  - error
+                additionalProperties: false
+              examples:
+                example1:
+                  value:
+                    status: error
+                    error:
+                      message: Sample error message
+components:
+  schemas:
+    Schema1:
+      anyOf:
+        - type: object
+          properties:
+            and:
+              minItems: 1
+              type: array
+              items:
+                $ref: "#/components/schemas/Schema1"
+          required:
+            - and
+        - type: object
+          properties:
+            or:
+              minItems: 1
+              type: array
+              items:
+                $ref: "#/components/schemas/Schema1"
+          required:
+            - or
+        - type: object
+          properties:
+            field:
+              type: string
+              minLength: 1
+            op:
+              type: string
+              minLength: 1
+            value:
+              anyOf:
+                - anyOf:
+                    - type: string
+                    - type: number
+                    - type: boolean
+                    - {}
+                - type: array
+                  items:
+                    anyOf:
+                      - type: string
+                      - type: number
+                      - type: boolean
+                      - {}
+                - type: array
+                  prefixItems:
+                    - anyOf:
+                        - type: string
+                        - type: number
+                        - type: boolean
+                        - {}
+                    - anyOf:
+                        - type: string
+                        - type: number
+                        - type: boolean
+                        - {}
+                  items:
+                    not: {}
+          required:
+            - field
+            - op
+    Schema2:
+      anyOf:
+        - type: object
+          properties:
+            and:
+              minItems: 1
+              type: array
+              items:
+                $ref: "#/components/schemas/Schema2"
+          required:
+            - and
+        - type: object
+          properties:
+            or:
+              minItems: 1
+              type: array
+              items:
+                $ref: "#/components/schemas/Schema2"
+          required:
+            - or
+        - type: object
+          properties:
+            field:
+              type: string
+              minLength: 1
+            op:
+              type: string
+              minLength: 1
+            value:
+              anyOf:
+                - anyOf:
+                    - type: string
+                    - type: number
+                    - type: boolean
+                    - {}
+                - type: array
+                  items:
+                    anyOf:
+                      - type: string
+                      - type: number
+                      - type: boolean
+                      - {}
+                - type: array
+                  prefixItems:
+                    - anyOf:
+                        - type: string
+                        - type: number
+                        - type: boolean
+                        - {}
+                    - anyOf:
+                        - type: string
+                        - type: number
+                        - type: boolean
+                        - {}
+                  items:
+                    not: {}
+          required:
+            - field
+            - op
+    Schema3:
+      anyOf:
+        - type: object
+          properties:
+            and:
+              minItems: 1
+              type: array
+              items:
+                $ref: "#/components/schemas/Schema3"
+          required:
+            - and
+        - type: object
+          properties:
+            or:
+              minItems: 1
+              type: array
+              items:
+                $ref: "#/components/schemas/Schema3"
+          required:
+            - or
+        - type: object
+          properties:
+            field:
+              type: string
+              minLength: 1
+            op:
+              type: string
+              minLength: 1
+            value:
+              anyOf:
+                - anyOf:
+                    - type: string
+                    - type: number
+                    - type: boolean
+                    - {}
+                - type: array
+                  items:
+                    anyOf:
+                      - type: string
+                      - type: number
+                      - type: boolean
+                      - {}
+                - type: array
+                  prefixItems:
+                    - anyOf:
+                        - type: string
+                        - type: number
+                        - type: boolean
+                        - {}
+                    - anyOf:
+                        - type: string
+                        - type: number
+                        - type: boolean
+                        - {}
+                  items:
+                    not: {}
+          required:
+            - field
+            - op
+  responses: {}
+  parameters: {}
+  examples: {}
+  requestBodies: {}
+  headers: {}
+  securitySchemes: {}
+  links: {}
+  callbacks: {}
+tags: []
+servers:
+  - url: http://localhost:8019
+
