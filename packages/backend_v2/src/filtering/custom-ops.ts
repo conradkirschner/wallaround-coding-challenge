@@ -1,4 +1,3 @@
-// src/filtering/custom-ops.ts
 import type { FieldType } from './filterable';
 import type { Primitive } from './ast';
 

@@ -7,6 +7,7 @@
     "codegen:filters": "tsx scripts/generate-filter-queries.ts",
     "codegen:filters:microorm": "FILTER_BUILDERS=mikroorm DEBUG_FILTER_CODEGEN=1 npm run codegen:filters",
     "codegen:filters:prisma": "FILTER_BUILDERS=prisma DEBUG_FILTER_CODEGEN=1 npm run codegen:filters",
+    "codegen:filters:knex": "FILTER_BUILDERS=knex DEBUG_FILTER_CODEGEN=1 npm run codegen:filters",
     "db:microorm:reset": "tsx scripts/microorm/db-reset.ts",
     "db:microorm:seed": "tsx scripts/microorm/db-seed.ts",
     "db:microorm:reseed": "npm run db:microorm:reset && npm run db:microorm:seed",
@@ -19,7 +20,11 @@
     "db:prisma:reset": "tsx scripts/prisma/db-reset.ts",
     "db:prisma:seed": "tsx scripts/prisma/db-seed.ts",
     "db:prisma:reseed": "npm run db:prisma:reset && npm run db:prisma:seed",
-    "smoke:users:prisma": "tsx scripts/prisma/smoke-users.ts"
+    "smoke:users:prisma": "tsx scripts/prisma/smoke-users.ts",
+    "db:knex:seed": "tsx scripts/knex/db-seed.ts",
+    "db:knex:reset": "tsx scripts/knex/db-reset.ts",
+    "db:knex:reseed": "npm run db:knex:reset && npm run db:knex:seed",
+    "smoke:users:knex": "tsx scripts/knex/smoke-users.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
@@ -33,6 +38,7 @@
     "@mikro-orm/sqlite": "^6.5.8",
     "@prisma/client": "^6.18.0",
     "better-sqlite3": "^12.4.1",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "prisma": "^6.18.0",
     "reflect-metadata": "^0.2.2"

@@ -1,5 +1,7 @@
 // scripts/generate-filter-queries.ts
 import 'reflect-metadata';
+import 'dotenv/config'
+
 import path from 'node:path';
 import { mkdirSync, readdirSync, statSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -12,6 +14,7 @@ import {
     type RelationMeta,
 } from '../src/filtering/filterable';
 import { getSelectableFields } from '../src/filtering/expose';
+import {sqlCaps} from "./knex/bootstrap.sql";
 
 type Ctor<T = unknown> = new (...args: never[]) => T;
 
@@ -134,6 +137,64 @@ function writeTopLevelIndex(buildersPresent: string[]) {
     writeFileSync(path.join(OUT_ABS, 'index.ts'), lines.join('\n') + '\n', 'utf8');
 }
 
+/** Best-effort dynamic import for a bootstrap module exporting `sqlCtx` */
+async function loadSqlBootstrap(sqlBootstrapPath?: string): Promise<{ db: any; caps: any }> {
+    const candidates = [
+        sqlBootstrapPath,                                                // explicit via env
+        path.join(PKG_ROOT, 'app', 'bootstrap', 'sql.ts'),              // TS source default
+        path.join(PKG_ROOT, 'app', 'bootstrap', 'sql.js'),              // JS build default
+    ].filter(Boolean) as string[];
+
+    let lastErr: unknown;
+    for (const p of candidates) {
+        try {
+            const mod = await import(pathToFileURL(p).href);
+            // Prefer a dedicated context if present…
+            const ctx =
+                mod?.sqlCtx ??
+                mod?.default?.sqlCtx ??
+                mod?.default ??
+                mod;
+
+            // Try multiple common shapes for db/knex and caps
+            const db =
+                ctx?.knex ??
+                ctx?.db ??
+                ctx?.client ??
+                mod?.db ??
+                mod?.knex ??
+                mod?.client;
+
+            const caps =
+                // inside ctx
+                ctx?.caps ??
+                ctx?.capabilities ??
+                ctx?.mapping ??
+                // top-level exports (your bootstrap uses `export const sqlCaps = …`)
+                mod?.sqlCaps ??
+                mod?.caps ??
+                mod?.capabilities ??
+                mod?.mapping ??
+                mod?.default?.sqlCaps ??
+                mod?.default?.caps;
+            console.log('asdasdhere', db, caps);
+            if (!db || !caps) {
+                lastErr = new Error(`Module loaded but missing "sqlCtx.{knex, caps}" — file: ${p}`);
+                continue;
+            }
+            return { db, caps };
+        } catch (e) {
+            lastErr = e;
+        }
+    }
+console.info('tried to load', sqlBootstrapPath)
+    const hint = [
+        'The Knex builder expects a bootstrap that exports `sqlCtx = knexCtx(db, caps)`.',
+        'Default location: app/bootstrap/sql.ts (override with FILTER_SQL_BOOTSTRAP).',
+    ].join(' ');
+    throw new Error(`[filter-codegen] Unable to load SQL bootstrap. ${hint}\nLast error: ${String(lastErr)}`);
+}
+
 async function main() {
     // 1) ensure templates & output
     for (const b of BUILDERS) assertTemplates(b);
@@ -164,6 +225,15 @@ async function main() {
 
     const buildersWithOutput = new Set<string>();
 
+    // Pre-load shared resources for Knex builder only when needed
+    let knexEnv: { db: any; caps: any } | null = null;
+    const wantsKnex = BUILDERS.includes('knex');
+    if (wantsKnex) {
+        const bootstrapOverride = process.env.FILTER_SQL_BOOTSTRAP; // absolute or relative path
+        console.info('Overriding Bootstrap file for knex -> ' + bootstrapOverride)
+        knexEnv = await loadSqlBootstrap(bootstrapOverride ? path.resolve(PKG_ROOT, bootstrapOverride) : undefined);
+    }
+
     // 4) generate per entity per builder
     for (const { ctor, name: entity, meta, relMeta } of selected) {
         const { selects, relations } = deriveSelectsAndRelations(ctor, meta);
@@ -184,6 +254,14 @@ async function main() {
             } else if (builder === 'mikroorm') {
                 const { fieldsJsonForMikro } = await import('./microorm/generator');
                 fields = await fieldsJsonForMikro(entity, ctor, meta);
+            } else if (builder === 'knex') {
+                // --- Knex branch (dynamic) ---
+                const { fieldsJsonForSql } = await import('./knex/generator');
+                if (!knexEnv) {
+                    throw new Error('[filter-codegen] Internal error: knex environment not initialized.');
+                }
+                const { db, caps } = knexEnv;
+                fields = await fieldsJsonForSql(entity, ctor, meta, db, caps);
             } else {
                 throw new Error(`Unsupported builder "${builder}"`);
             }
@@ -222,6 +300,7 @@ async function main() {
     writeTopLevelIndex(Array.from(buildersWithOutput));
 
     console.log(`✅ Generated filter query objects at ${OUT_ABS}`);
+    process.exit(0); // force exit no matter what is running
 }
 
 main().catch((e) => {

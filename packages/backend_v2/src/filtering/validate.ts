@@ -1,4 +1,3 @@
-// src/filtering/validate.ts
 import type { FilterInput, FilterNode, ConditionNode, Primitive } from './ast';
 import type { FilterableMap, FieldType } from './filterable';
 import { FilterError } from './errors';
@@ -29,13 +28,13 @@ function isDateLike(v: unknown): v is string | Date {
 
 function typeOk(expected: FieldType, value: Primitive): boolean {
     switch (expected) {
-        case 'string': return typeof value === 'string';
-        case 'number': return typeof value === 'number' && Number.isFinite(value);
+        case 'string':  return typeof value === 'string';
+        case 'number':  return typeof value === 'number' && Number.isFinite(value);
         case 'boolean': return typeof value === 'boolean';
-        case 'date': return isDateLike(value);
-        case 'enum': return typeof value === 'string';
-        case 'uuid': return typeof value === 'string'; // format validated by db/driver
-        default: return true;
+        case 'date':    return isDateLike(value);
+        case 'enum':    return typeof value === 'string';
+        case 'uuid':    return typeof value === 'string'; // format validated by db/driver
+        default:        return true;
     }
 }
 
@@ -91,7 +90,11 @@ function assertValueForOp(
     if (op === 'in') {
         if (!Array.isArray(v)) throw bad();
         if ((v as unknown[]).length > maxInSize) {
-            throw new FilterError('FILTER_COMPLEXITY_EXCEEDED', `'in' list too large`, { field, size: (v as unknown[]).length, maxInSize });
+            throw new FilterError(
+                'FILTER_COMPLEXITY_EXCEEDED',
+                `'in' list too large`,
+                { field, size: (v as unknown[]).length, maxInSize }
+            );
         }
         for (const item of v as Primitive[]) if (!typeOk(fieldType, item)) throw bad();
         if (fieldType === 'enum') assertEnumArray(enumValues, v as unknown[], field, maxInSize);
@@ -162,7 +165,8 @@ function validateNode(
         throw new FilterError('FILTER_INVALID_SHAPE', 'Condition requires { field, op, value? }');
     }
 
-    const { field, op } = node;
+    const field = node.field;
+    const op = node.op.toLowerCase() as Op; // normalize to lowercase for comparison
 
     // Security: must be selectable at root if policy says so
     enforceSelectableGuard(field, policy);
@@ -172,10 +176,19 @@ function validateNode(
     if (!def) {
         throw new FilterError('FILTER_FIELD_NOT_ALLOWED', `Field '${field}' is not filterable`, { field });
     }
-    const allowed = def.operators;
-    if (!allowed.includes(op as Op)) {
+
+    // Ensure the list we check against is a simple string-array (no entity-scoped Operator type leakage)
+    const allowedRaw = def.operators ?? [];
+    const allowed: readonly string[] = allowedRaw as readonly string[];
+
+    // Compare in lowercase to be robust to casing
+    const allowedLower = new Set(allowed.map((s) => s.toLowerCase()));
+
+    if (!allowedLower.has(op)) {
         throw new FilterError('FILTER_OPERATOR_UNSUPPORTED', `Operator '${op}' is not allowed for '${field}'`, {
-            field, op, allowed,
+            field,
+            op,
+            allowed, // return the original list (as configured) for better DX
         });
     }
 

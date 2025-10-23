@@ -6,7 +6,7 @@ import type { FilterInput } from '../filtering/ast';
 
 export function usersFilterController(em: EntityManager) {
     return async (req: Request, res: Response) => {
-        const filter = (req.body?.filter ?? req.body) as FilterInput | undefined;
+        const filter = (req.body?.filter ?? req.body) as FilterInput;
         try {
             const users = await findUsers(em, filter);
             res.status(200).json(users);

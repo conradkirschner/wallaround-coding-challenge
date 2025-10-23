@@ -1,4 +1,3 @@
-// src/filtering/limits.ts
 export interface FilterLimits {
     /** Max nested depth of and/or groups (root = depth 1). */
     maxDepth: number;

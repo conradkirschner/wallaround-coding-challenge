@@ -69,6 +69,7 @@ import { validateFilter } from 'src/filtering/validate';
 import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
 import type { PrismaCtx } from 'src/filtering/runtime/driver';
+
 // Domain ctor import to support string-only calls:
 import { <%= entity %> as Domain<%= entity %> } from 'src/domain/<%= entity.toLowerCase() %>.entity';
 
@@ -542,7 +543,7 @@ type PrismaEntityName<T> = string;
 /* ========================= Overloads ========================= */
 /** 1) ctx + Ctor (entity) */
 export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -550,7 +551,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
 ): Promise<Awaited<ReturnType<PrismaClient['<%- lcEntity %>']['findMany']>>>;
 /** 2) ctx + Ctor (plain) */
 export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -558,7 +559,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
 ): Promise<<%= entity %>Plain<S, T>[]>;
 /** 3) ctx + entityName + Ctor (entity) */
 export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: PrismaEntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
@@ -567,7 +568,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
 ): Promise<Awaited<ReturnType<PrismaClient['<%- lcEntity %>']['findMany']>>>;
 /** 4) ctx + entityName + Ctor (plain) */
 export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: PrismaEntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
@@ -576,7 +577,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
 ): Promise<<%= entity %>Plain<S, T>[]>;
 /** 5) ctx + entityName ONLY (entity) */
 export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: PrismaEntityName<T>,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -584,7 +585,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
 ): Promise<Awaited<ReturnType<PrismaClient['<%- lcEntity %>']['findMany']>>>;
 /** 6) ctx + entityName ONLY (plain) */
 export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: PrismaEntityName<T>,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -593,7 +594,7 @@ export async function resolve<%= entity %><T extends object, S extends readonly 
 
 /* ====================== Implementation ====================== */
 export async function resolve<%= entity %><T extends object, S extends readonly <%= entity %>SelectField[] | undefined = readonly <%= entity %>SelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   a: PrismaEntityName<T> | (new (...args: never[]) => T),
   b?: FilterInput | (new (...args: never[]) => T),
   c?: FilterInput | CustomOpRegistry,

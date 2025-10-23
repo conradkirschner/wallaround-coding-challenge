@@ -1,39 +1,43 @@
-// src/filtering/runtime/driver.ts
-// Minimal driver "ctx" types so the resolver signature is ORM-agnostic
+// Minimal, framework-agnostic driver "ctx" types.
+// No imports from ORM packages, consumers/adapters pin the generics.
 
-// ---- MikroORM ----
-import type { EntityManager } from '@mikro-orm/core';
-
-export interface MikroOrmCtx {
+/** MikroORM */
+export interface MikroOrmCtx<EM = unknown> {
     kind: 'mikroorm';
-    em: EntityManager;
+    em: EM;
 }
-
-/** Wrap a MikroORM EntityManager to a driver ctx */
-export function mikroOrmCtx(em: EntityManager): MikroOrmCtx {
+export function mikroOrmCtx<EM>(em: EM): MikroOrmCtx<EM> {
     return { kind: 'mikroorm', em };
 }
 
-// ---- Prisma ----
-import type { PrismaClient } from '@prisma/client';
-
-export interface PrismaCtx {
+/** Prisma */
+export interface PrismaCtx<C = unknown> {
     kind: 'prisma';
-    client: PrismaClient;
+    client: C;
 }
-
-/** Wrap a PrismaClient to a driver ctx */
-export function prismaCtx(client: PrismaClient): PrismaCtx {
+export function prismaCtx<C>(client: C): PrismaCtx<C> {
     return { kind: 'prisma', client };
 }
 
-// ---- Knex (placeholder; keep it typed without `any`) ----
-export interface KnexLike {} // refine when you add knex
+/** Knex */
+export interface KnexLike {} // refine if you want
 
-export interface KnexCtx {
+export interface KnexCtx<Caps = unknown, K = KnexLike> {
     kind: 'knex';
-    knex: KnexLike;
+    knex: K;
+    /** SQL capabilities (adapter) – required by the SQL resolver */
+    caps?: Caps;
 }
 
-// ---- Common union (handy for adapters) ----
+/** Wrap a Knex instance (and optional capabilities) into a driver ctx */
+export function knexCtx<K = KnexLike, Caps = unknown>(knex: K, caps?: Caps): KnexCtx<Caps, K> {
+    return { kind: 'knex', knex, ...(caps ? { caps } : {}) };
+}
+
+/** Common union (useful for adapter-agnostic plumbing) */
 export type OrmCtx = MikroOrmCtx | PrismaCtx | KnexCtx;
+
+/** Optional: tiny type guards if you ever need them */
+export const isPrismaCtx = (c: OrmCtx): c is PrismaCtx => c.kind === 'prisma';
+export const isMikroOrmCtx = (c: OrmCtx): c is MikroOrmCtx => c.kind === 'mikroorm';
+export const isKnexCtx = (c: OrmCtx): c is KnexCtx => c.kind === 'knex';

@@ -20,6 +20,7 @@ import { validateFilter } from 'src/filtering/validate';
 import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
 import type { PrismaCtx } from 'src/filtering/runtime/driver';
+
 // Domain ctor import to support string-only calls:
 import { Post as DomainPost } from 'src/domain/post.entity';
 
@@ -467,7 +468,7 @@ type PrismaEntityName<T> = string;
 /* ========================= Overloads ========================= */
 /** 1) ctx + Ctor (entity) */
 export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -475,7 +476,7 @@ export async function resolvePost<T extends object, S extends readonly PostSelec
 ): Promise<Awaited<ReturnType<PrismaClient['post']['findMany']>>>;
 /** 2) ctx + Ctor (plain) */
 export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -483,7 +484,7 @@ export async function resolvePost<T extends object, S extends readonly PostSelec
 ): Promise<PostPlain<S, T>[]>;
 /** 3) ctx + entityName + Ctor (entity) */
 export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: PrismaEntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
@@ -492,7 +493,7 @@ export async function resolvePost<T extends object, S extends readonly PostSelec
 ): Promise<Awaited<ReturnType<PrismaClient['post']['findMany']>>>;
 /** 4) ctx + entityName + Ctor (plain) */
 export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: PrismaEntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
@@ -501,7 +502,7 @@ export async function resolvePost<T extends object, S extends readonly PostSelec
 ): Promise<PostPlain<S, T>[]>;
 /** 5) ctx + entityName ONLY (entity) */
 export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: PrismaEntityName<T>,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -509,7 +510,7 @@ export async function resolvePost<T extends object, S extends readonly PostSelec
 ): Promise<Awaited<ReturnType<PrismaClient['post']['findMany']>>>;
 /** 6) ctx + entityName ONLY (plain) */
 export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   entity: PrismaEntityName<T>,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -518,7 +519,7 @@ export async function resolvePost<T extends object, S extends readonly PostSelec
 
 /* ====================== Implementation ====================== */
 export async function resolvePost<T extends object, S extends readonly PostSelectField[] | undefined = readonly PostSelectField[] | undefined>(
-  ctx: PrismaCtx,
+  ctx: PrismaCtx<PrismaClient>,
   a: PrismaEntityName<T> | (new (...args: never[]) => T),
   b?: FilterInput | (new (...args: never[]) => T),
   c?: FilterInput | CustomOpRegistry,

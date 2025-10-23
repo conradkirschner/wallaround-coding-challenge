@@ -1,4 +1,3 @@
-// src/filtering/query-options.ts
 import type { FilterableMap } from './filterable';
 import { getSelectableFields, getSortableFields } from './expose';
 import { FilterError } from './errors';

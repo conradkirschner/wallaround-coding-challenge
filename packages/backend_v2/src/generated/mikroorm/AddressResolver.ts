@@ -6,7 +6,7 @@
  * - Pass `--relations` with a JSON array of top-level relation names.
  */
 
-import type { EntityName, FindOptions, FilterQuery } from '@mikro-orm/core';
+import type { EntityName, FindOptions, FilterQuery, EntityManager } from '@mikro-orm/core';
 import type { FilterInput, FilterNode, ConditionNode, Primitive } from 'src/filtering/ast';
 import { getFilterableMetadata, type FilterableMap, type FieldType } from 'src/filtering/filterable';
 import { CustomOpRegistry, type IR } from 'src/filtering/custom-ops';
@@ -388,7 +388,7 @@ export interface AddressResolveOptions<S extends readonly AddressSelectField[] |
 
 /** Overload 1: ctx + EntityCtor (entity) */
 export async function resolveAddress<T extends object, S extends readonly AddressSelectField[] | undefined = readonly AddressSelectField[] | undefined>(
-  ctx: MikroOrmCtx,
+  ctx: MikroOrmCtx<EntityManager>,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -396,7 +396,7 @@ export async function resolveAddress<T extends object, S extends readonly Addres
 ): Promise<T[]>;
 /** Overload 2: ctx + EntityCtor (plain) */
 export async function resolveAddress<T extends object, S extends readonly AddressSelectField[] | undefined = readonly AddressSelectField[] | undefined>(
-  ctx: MikroOrmCtx,
+  ctx: MikroOrmCtx<EntityManager>,
   entity: new (...args: never[]) => T,
   filter?: FilterInput,
   custom?: CustomOpRegistry,
@@ -404,7 +404,7 @@ export async function resolveAddress<T extends object, S extends readonly Addres
 ): Promise<AddressPlain<S, T>[]>;
 /** Overload 3: ctx + entityName + ctor (entity) */
 export async function resolveAddress<T extends object, S extends readonly AddressSelectField[] | undefined = readonly AddressSelectField[] | undefined>(
-  ctx: MikroOrmCtx,
+  ctx: MikroOrmCtx<EntityManager>,
   entity: EntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
@@ -413,7 +413,7 @@ export async function resolveAddress<T extends object, S extends readonly Addres
 ): Promise<T[]>;
 /** Overload 4: ctx + entityName + ctor (plain) */
 export async function resolveAddress<T extends object, S extends readonly AddressSelectField[] | undefined = readonly AddressSelectField[] | undefined>(
-  ctx: MikroOrmCtx,
+  ctx: MikroOrmCtx<EntityManager>,
   entity: EntityName<T>,
   entityCtor: new (...args: never[]) => T,
   filter?: FilterInput,
@@ -422,7 +422,7 @@ export async function resolveAddress<T extends object, S extends readonly Addres
 ): Promise<AddressPlain<S, T>[]>;
 
 export async function resolveAddress<T extends object, S extends readonly AddressSelectField[] | undefined = readonly AddressSelectField[] | undefined>(
-  ctx: MikroOrmCtx,
+  ctx: MikroOrmCtx<EntityManager>,
   a: EntityName<T> | (new (...args: never[]) => T),
   b?: FilterInput | (new (...args: never[]) => T),
   c?: FilterInput | CustomOpRegistry,

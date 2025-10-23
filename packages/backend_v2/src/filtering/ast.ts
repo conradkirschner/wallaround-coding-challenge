@@ -1,4 +1,3 @@
-// src/filtering/ast.ts
 export type Primitive = string | number | boolean | Date | null;
 
 /** A single field condition (value is optional for nullary ops like is_null) */

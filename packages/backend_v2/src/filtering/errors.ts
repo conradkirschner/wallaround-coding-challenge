@@ -9,7 +9,7 @@ export type FilterErrorCode =
 
 export class FilterError extends Error {
     readonly code: FilterErrorCode;
-    readonly details?: Record<string, unknown>;
+    readonly details?: Record<string, unknown> | undefined;
 
     constructor(code: FilterErrorCode, message: string, details?: Record<string, unknown>) {
         super(message);

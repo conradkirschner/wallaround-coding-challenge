@@ -1,4 +1,3 @@
-// src/filtering/filterable.ts
 import 'reflect-metadata';
 
 /** Field value type classification for filter semantics */
