@@ -1,9 +1,8 @@
-// tsconfig.json
 {
     "compilerOptions": {
         "target": "es2022",
         "lib": ["es2022"],
-        "module": "NodeNext",
+        "module": "es2022",
         "moduleResolution": "bundler",
         "strict": true,
         "noEmit": true,
@@ -19,7 +18,10 @@
         "exactOptionalPropertyTypes": true,
         "forceConsistentCasingInFileNames": true,
         "baseUrl": ".",
-        "types": ["node"]
+        "types": ["node"],
+        "paths": {
+            "@/*": ["./src/*"]
+        }
 },
     "include": ["src/**/*.ts", "scripts/**/*.ts"],
     "exclude": ["node_modules", "dist", "_templates"]

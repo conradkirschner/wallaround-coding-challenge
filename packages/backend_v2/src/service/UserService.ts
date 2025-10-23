@@ -5,7 +5,6 @@ import {CustomOpRegistry, ops, registerDefaultCustoms} from 'src/filtering/custo
 import {resolveUser as resolveUsers} from "../generated/knex";
 import {sqlCtx} from "../../scripts/knex/bootstrap.sql";
 
-
 /* Example for registering a Custom Op*/
 const registry = new CustomOpRegistry();
 registerDefaultCustoms(registry);

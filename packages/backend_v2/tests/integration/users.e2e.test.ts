@@ -1,58 +1,47 @@
-/**
- * Integration test for /v1/knex/users
- *
- * Requires npm scripts:
- *   "db:knex:reseed"
- *   "codegen:filters:knex"
- *
- * The app must be exported from "src/api/app" (default export or named `app`).
- */
-import { spawnSync } from "node:child_process";
-import type { Express } from "express";
-import request from "supertest";
+// tests/integration/users.e2e.test.ts
+import "reflect-metadata";
+import { execSync } from "node:child_process";
+import { testEndpoint } from "express-zod-api";
+import { usersPostEndpoint } from "../../src/routes/user";
+// close the Knex pool after all tests:
+import { sqlCtx } from "../../scripts/knex/bootstrap.sql";
 
-const runScript = (script: string) => {
-    const res = spawnSync(
-        process.platform === "win32" ? "npm.cmd" : "npm",
-        ["run", script],
-        { stdio: "inherit", cwd: process.cwd(), env: process.env }
-    );
-    if (res.status !== 0) {
-        throw new Error(`Failed running npm script: ${script}`);
-    }
-};
-
-describe("/v1/knex/users (integration)", () => {
-    let app: Express;
-
-    beforeAll(async () => {
-        // 1) Codegen before app import so generated resolvers exist
-        runScript("codegen:filters:knex");
-        // 2) Reseed DB
-        runScript("db:knex:reseed");
-
-        // 3) Dynamically import AFTER codegen/reseed
-        const mod = await import("src/api/app");
-        app = (mod.default ?? mod.app) as Express;
-        if (!app) throw new Error("Could not load Express app from src/api/app");
-    }, 120_000);
-
-    it("returns all users when filter is an empty object", async () => {
-        const res = await request(app)
-            .post("/v1/knex/users")
-            .send({ filter: {} })
-            .set("content-type", "application/json");
-
-        expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty("data");
-        expect(Array.isArray(res.body.data)).toBe(true);
-        expect(res.body.data.length).toBeGreaterThanOrEqual(1);
-
-        const u = res.body.data[0];
-        expect(typeof u.email).toBe("string");
+describe("/v1/knex/users (integration via testEndpoint)", () => {
+    beforeAll(() => {
+        execSync("npm run codegen:filters:knex:ci", { stdio: "inherit" });
+        execSync("npm run db:knex:reseed", { stdio: "inherit" });
     });
 
-    it("applies a compound filter (age >= 30 AND (role == admin OR isActive == false))", async () => {
+    afterAll(async () => {
+        // ensure DB connections are closed so Jest can exit
+        try {
+            await (sqlCtx.knex as any)?.client?.destroy?.();
+        } catch {
+            // ignore
+        }
+    });
+
+    it("returns all users when filter is an empty object", async () => {
+        const { responseMock, loggerMock } = await testEndpoint({
+            endpoint: usersPostEndpoint,
+            requestProps: { method: "POST", body: { filter: {} } },
+            configProps: { logger: { level: "silent" } },
+        });
+
+        expect(loggerMock._getLogs().error).toHaveLength(0);
+        expect(responseMock._getStatusCode()).toBe(200);
+
+        // express-zod-api envelope: { status, data: <handlerResult> }
+        const body = responseMock._getJSONData();
+        expect(body).toHaveProperty("status", "success");
+        expect(body).toHaveProperty("data");
+
+        const payload = body.data;             // your handler's return
+        expect(Array.isArray(payload.data)).toBe(true);
+        expect(payload.data.length).toBeGreaterThan(0);
+    });
+
+    it('applies compound filter: age >= 30 AND (role == "admin" OR isActive == false)', async () => {
         const filter = {
             and: [
                 { field: "age", op: "gte", value: 30 },
@@ -65,31 +54,37 @@ describe("/v1/knex/users (integration)", () => {
             ],
         };
 
-        const res = await request(app)
-            .post("/v1/knex/users")
-            .send({ filter })
-            .set("content-type", "application/json");
+        const { responseMock, loggerMock } = await testEndpoint({
+            endpoint: usersPostEndpoint,
+            requestProps: { method: "POST", body: { filter } },
+            configProps: { logger: { level: "silent" } },
+        });
 
-        expect(res.status).toBe(200);
-        expect(Array.isArray(res.body?.data)).toBe(true);
-        for (const row of res.body.data as any[]) {
+        expect(loggerMock._getLogs().error).toHaveLength(0);
+        expect(responseMock._getStatusCode()).toBe(200);
+
+        const body = responseMock._getJSONData();
+        const payload = body.data; // unwrap your handler result
+
+        expect(Array.isArray(payload.data)).toBe(true);
+
+        for (const row of payload.data as any[]) {
             const ageOK = typeof row.age === "number" ? row.age >= 30 : true;
             const roleIsAdmin =
-                typeof row.role === "string"
-                    ? row.role.toLowerCase() === "admin"
-                    : false;
-            const isActiveFalse =
-                row.isActive === false || row.isActive === 0 /* sqlite booleanish */;
-            expect(ageOK && (roleIsAdmin || isActiveFalse)).toBe(true);
+                typeof row.role === "string" ? row.role.toLowerCase() === "admin" : false;
+            // sqlite boolean can be 0/1, accept both
+            const inactive = row.isActive === false || row.isActive === 0;
+            expect(ageOK && (roleIsAdmin || inactive)).toBe(true);
         }
     });
 
     it("rejects invalid filter JSON string with 400", async () => {
-        const res = await request(app)
-            .post("/v1/knex/users")
-            .send({ filter: "{not: valid: json}" })
-            .set("content-type", "application/json");
+        const { responseMock } = await testEndpoint({
+            endpoint: usersPostEndpoint,
+            requestProps: { method: "POST", body: { filter: "{bad json" } },
+            configProps: { logger: { level: "silent" } },
+        });
 
-        expect(res.status).toBe(400);
+        expect(responseMock._getStatusCode()).toBe(400);
     });
 });

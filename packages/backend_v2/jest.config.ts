@@ -1,3 +1,4 @@
+// jest.config.ts
 import type { Config } from "jest";
 
 const config: Config = {
@@ -6,27 +7,24 @@ const config: Config = {
     testMatch: ["**/tests/**/*.test.ts", "**/tests/**/*.e2e.test.ts"],
     testTimeout: 120000,
 
-    // ESM + TS
     extensionsToTreatAsEsm: [".ts"],
     transform: {
         "^.+\\.tsx?$": [
             "ts-jest",
-            {
-                tsconfig: "tsconfig.jest.json",
-                useESM: true,
-                isolatedModules: true
-            }
+            { tsconfig: "tsconfig.jest.json", useESM: true }
         ]
     },
 
-    // Always provide an object (satisfies exactOptionalPropertyTypes)
     moduleNameMapper: {
-        // strip .js extension that TS adds in ESM output when importing relative modules
         "^(\\.{1,2}/.*)\\.js$": "$1",
-        "^src/(.*)$": "<rootDir>/src/$1"
+        "^src/(.*)$": "<rootDir>/src/$1",
+
+        // 🔧 ESM pain points → CJS stubs
+        "^@paralleldrive/cuid2$": "<rootDir>/tests/shims/cuid2.cjs",
+        "^formidable$": "<rootDir>/tests/shims/formidable.cjs",
     },
 
-    moduleFileExtensions: ["ts", "tsx", "js", "mjs", "cjs", "json", "node"]
+    moduleFileExtensions: ["ts", "tsx", "js", "mjs", "cjs", "json", "node"],
 };
 
 export default config;

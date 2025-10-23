@@ -6,6 +6,7 @@ import { Selectable, Sortable } from 'src/filtering/expose';
 import { Filterable } from 'src/filtering/filterable';
 import type { Uuid } from './user.entity';
 import { User } from './user.entity';
+import type { Rel } from '@mikro-orm/core';
 
 
 @Entity({ tableName: 'addresses' })
@@ -59,5 +60,5 @@ export class Address {
         mappedBy: (u) => u.address,   // inverse side
         nullable: true,
     })
-    user?: User;
+    user?: Rel<User>;
 }

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
     Entity, PrimaryKey, Property, ManyToOne, Index, OptionalProps,
+    Rel,
 } from '@mikro-orm/core';
 import { Selectable, Sortable } from 'src/filtering/expose';
 import { Filterable } from 'src/filtering/filterable';
@@ -44,5 +45,5 @@ export class Post {
 
     @Selectable()
     @ManyToOne(() => User, { nullable: false })
-    author!: User;
+    author!: Rel<User>;
 }
