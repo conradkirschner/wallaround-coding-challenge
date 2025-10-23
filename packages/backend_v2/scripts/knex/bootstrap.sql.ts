@@ -94,7 +94,7 @@ const postMap: SqlMapping = {
     relations: {
         user: {
             kind: 'one',
-            table: 'author',
+            table: 'user',
             join: { local: 'user_id', foreign: 'id' },
             columns: {
                 id: 'id',
