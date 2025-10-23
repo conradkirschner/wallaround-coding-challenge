@@ -20,8 +20,6 @@ const config: Config = {
         "^src/(.*)$": "<rootDir>/src/$1",
 
         // 🔧 ESM pain points → CJS stubs
-        "^@paralleldrive/cuid2$": "<rootDir>/tests/shims/cuid2.cjs",
-        "^formidable$": "<rootDir>/tests/shims/formidable.cjs",
     },
 
     moduleFileExtensions: ["ts", "tsx", "js", "mjs", "cjs", "json", "node"],

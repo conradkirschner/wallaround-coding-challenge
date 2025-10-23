@@ -11,7 +11,7 @@ For convience this package currently contains too many dependencies (prisma, mic
 
 filter-me is a type-safe, metadata-driven filtering engine for Node/TypeScript.
 Annotate your domain models once (@Filterable, @Selectable, @Sortable) and let filter-me compile validated, injection-safe queries for your data layer. 
-It ships with adapters for Prisma and MikroORM, supports dotted relation paths, merges relation operators automatically, and handles 
+It ships with adapters for Prisma, MikroORM and Knex, supports dotted relation paths, merges relation operators automatically, and handles 
 projection, sorting, pagination, and relation-scoped predicates. Custom operators plug in via a small IR*, so you can extend behavior without leaking driver details.
 Think of it as a tiny compiler that turns a clean filter AST into efficient, driver-specific queries, fast to integrate, easy to test, and hard to misuse.
 
@@ -57,6 +57,7 @@ npm i filter-me reflect-metadata
 # plus pick your ORM, e.g.:
 npm i @prisma/client        
 # or:  npm i @mikro-orm/core @mikro-orm/postgresql
+# or:  npm i knex
 ```
 
 Enable TS emit for decorators (tsconfig):
