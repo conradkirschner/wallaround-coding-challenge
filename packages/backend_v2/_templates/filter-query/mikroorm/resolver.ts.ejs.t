@@ -42,6 +42,7 @@ import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
 import type { <%= entity %>Expr as Expr } from './<%= entity %>FilterQuery';
 import type { MikroOrmCtx } from 'src/filtering/runtime/driver';
+import type { CommonResolverApi } from 'src/filtering/runtime/resolver-api';
 
 /** ======================= Compile-time entity-scoped constants ======================= */
 export const <%= entity %>_SELECTABLE = <%- JSON.stringify(SELECTS) %> as const;
@@ -97,7 +98,7 @@ type <%= entity %>Plain<S extends readonly <%= entity %>SelectField[] | undefine
   S extends readonly <%= entity %>SelectField[] ? PickByPaths<T, S> : Record<string, unknown>;
 
 /** =========================================================================================
- *  FLUENT, STRICTLY-TYPED RESOLVER
+ *  FLUENT, STRICTLY-TYPED RESOLVER (implements CommonResolverApi)
  * =======================================================================================*/
 type Shape = 'plain' | 'entity';
 
@@ -117,6 +118,13 @@ export class <%= entity %>Resolver<
   T extends object,
   S extends readonly <%= entity %>SelectField[] | undefined = undefined,
   P extends Shape = 'plain'
+> implements CommonResolverApi<
+  <%= entity %>SelectField,
+  <%= entity %>FilterInput,
+  S,
+  P,
+  <%= entity %>Plain<S, T>,
+  T
 > {
   private readonly ctx: MikroOrmCtx<EntityManager>;
   private readonly em: EntityManager;
@@ -163,65 +171,85 @@ export class <%= entity %>Resolver<
     return new <%= entity %>Resolver<T, undefined, 'plain'>(ctx, name, ctor);
   }
 
-  /** ---------- Fluent API (immutable; narrows generics) ---------- */
+  /** ---------- Fluent API (immutable; implements CommonResolverApi while keeping narrowing) ---------- */
 
-  where(filter: <%= entity %>FilterInput): <%= entity %>Resolver<T, S, P> {
-    return this.clone({ filter });
+  /** Replace filter */
+  where(filter: <%= entity %>FilterInput): this;
+  where(filter: <%= entity %>FilterInput): <%= entity %>Resolver<T, S, P>;
+  where(filter: <%= entity %>FilterInput) {
+    return this.clone({ filter }) as any;
   }
 
-  whereAnd(...nodes: readonly <%= entity %>FilterNode[]): <%= entity %>Resolver<T, S, P> {
+  /** AND with existing filter */
+  whereAnd(...nodes: readonly <%= entity %>FilterInput[]): this;
+  whereAnd(...nodes: readonly <%= entity %>FilterNode[]): <%= entity %>Resolver<T, S, P>;
+  whereAnd(...nodes: readonly <%= entity %>FilterNode[]) {
     const next = this.state.filter
       ? ({ and: [this.state.filter, ...nodes] } as <%= entity %>FilterInput)
       : (nodes.length === 1 ? nodes[0]! : ({ and: nodes } as <%= entity %>FilterInput));
-    return this.clone({ filter: next });
+    return this.clone({ filter: next }) as any;
   }
 
-  whereOr(...nodes: readonly <%= entity %>FilterNode[]): <%= entity %>Resolver<T, S, P> {
+  /** OR with existing filter */
+  whereOr(...nodes: readonly <%= entity %>FilterInput[]): this;
+  whereOr(...nodes: readonly <%= entity %>FilterNode[]): <%= entity %>Resolver<T, S, P>;
+  whereOr(...nodes: readonly <%= entity %>FilterNode[]) {
     const next = this.state.filter
       ? ({ or: [this.state.filter, ...nodes] } as <%= entity %>FilterInput)
       : (nodes.length === 1 ? nodes[0]! : ({ or: nodes } as <%= entity %>FilterInput));
-    return this.clone({ filter: next });
+    return this.clone({ filter: next }) as any;
   }
 
-  withCustomOps(registry: CustomOpRegistry): <%= entity %>Resolver<T, S, P> {
-    return this.clone({ custom: registry });
+  /** Custom operators registry */
+  withCustomOps(registry: CustomOpRegistry): this;
+  withCustomOps(registry: CustomOpRegistry): <%= entity %>Resolver<T, S, P>;
+  withCustomOps(registry: CustomOpRegistry) {
+    return this.clone({ custom: registry }) as any;
   }
 
-  select<SS extends readonly <%= entity %>SelectField[]>(
-    ...fields: SS
-  ): <%= entity %>Resolver<T, SS, P> {
-    return this.clone<SS, P>({ select: fields as SS });
+  /** Selection (typed narrowing + interface-compatible 'this' signature) */
+  select<SS extends readonly <%= entity %>SelectField[]>(...fields: SS): this;
+  select<SS extends readonly <%= entity %>SelectField[]>(...fields: SS): <%= entity %>Resolver<T, SS, P>;
+  select(...fields: readonly <%= entity %>SelectField[]) {
+    return this.clone({ select: fields as any }) as any;
   }
 
-  selectAll(): <%= entity %>Resolver<T, typeof <%= entity %>_SELECTABLE, P> {
-    return this.clone<typeof <%= entity %>_SELECTABLE, P>({ select: <%= entity %>_SELECTABLE });
+  selectAll(): this;
+  selectAll(): <%= entity %>Resolver<T, typeof <%= entity %>_SELECTABLE, P>;
+  selectAll() {
+    return this.clone({ select: <%= entity %>_SELECTABLE }) as any;
   }
 
-  orderBy(field: <%= entity %>SelectField, direction: 'asc' | 'desc' = 'asc'): <%= entity %>Resolver<T, S, P> {
+  /** Sorting / pagination */
+  orderBy(field: <%= entity %>SelectField, direction: 'asc' | 'desc' = 'asc'): this {
     const s: SortSpec = [...(this.state.sort ?? []), { field, direction }];
-    return this.clone({ sort: s });
+    return this.clone({ sort: s }) as this;
+  }
+  sort(spec: SortSpec): this { return this.clone({ sort: spec }) as this; }
+
+  limit(n: number): this { return this.clone({ limit: n }) as this; }
+  offset(n: number): this { return this.clone({ offset: n }) as this; }
+  paginate(p: { limit?: number; offset?: number }): this {
+    return this.clone({
+      ...(p.limit  !== undefined ? { limit:  p.limit  } : {}),
+      ...(p.offset !== undefined ? { offset: p.offset } : {}),
+    }) as this;
   }
 
-  sort(spec: SortSpec): <%= entity %>Resolver<T, S, P> {
-    return this.clone({ sort: spec });
+  /** Security / limits */
+  secureRequireSelectable(): this {
+    return this.clone({ security: { ...(this.state.security ?? {}), requireSelectableForFilter: true } }) as this;
   }
+  limits(l: Partial<FilterLimits>): this { return this.clone({ limits: l }) as this; }
 
-  limit(n: number): <%= entity %>Resolver<T, S, P> { return this.clone({ limit: n }); }
-  offset(n: number): <%= entity %>Resolver<T, S, P> { return this.clone({ offset: n }); }
-  paginate(p: { limit?: number; offset?: number }): <%= entity %>Resolver<T, S, P> {
-    return this.clone({ ...(p.limit !== undefined ? { limit: p.limit } : {}), ...(p.offset !== undefined ? { offset: p.offset } : {}) });
-  }
+  /** Shape toggles — flip type-level shape for execute() */
+  entityShape(): this;
+  entityShape(): <%= entity %>Resolver<T, S, 'entity'>;
+  entityShape() { return this.clone<S, 'entity'>({ shape: 'entity' }) as any; }
 
-  secureRequireSelectable(): <%= entity %>Resolver<T, S, P> {
-    return this.clone({ security: { ...(this.state.security ?? {}), requireSelectableForFilter: true } });
-  }
-
-  limits(l: Partial<FilterLimits>): <%= entity %>Resolver<T, S, P> {
-    return this.clone({ limits: l });
-  }
-
-  entityShape(): <%= entity %>Resolver<T, S, 'entity'> { return this.clone<S, 'entity'>({ shape: 'entity' }); }
-  plainShape():  <%= entity %>Resolver<T, S, 'plain'>  { return this.clone<S, 'plain'>({  shape: 'plain'  }); }
+  plainShape(): this;
+  plainShape(): <%= entity %>Resolver<T, S, 'plain'>;
+  plainShape()  { return this.clone<S, 'plain'>({  shape: 'plain'  }) as any; }
 
   /** ---------- Execute (typed by shape & selections) ---------- */
   async execute(this: <%= entity %>Resolver<T, S, 'entity'>): Promise<T[]>;
@@ -459,7 +487,7 @@ export class <%= entity %>Resolver<
 
   private static emitRelationLeaf(
     tailField: string,
-    fieldType: FieldType,
+    _fieldType: FieldType,
     cond: <%= entity %>ConditionNode,
   ): Expr {
     const name = cond.op.toLowerCase();

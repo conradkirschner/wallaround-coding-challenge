@@ -10,6 +10,7 @@ import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
 import type { PostExpr as Expr } from './PostFilterQuery';
 import type { MikroOrmCtx } from 'src/filtering/runtime/driver';
+import type { CommonResolverApi } from 'src/filtering/runtime/resolver-api';
 
 /** ======================= Compile-time entity-scoped constants ======================= */
 export const Post_SELECTABLE = ["author","content","createdAt","id","published","title","updatedAt"] as const;
@@ -65,7 +66,7 @@ type PostPlain<S extends readonly PostSelectField[] | undefined, T> =
   S extends readonly PostSelectField[] ? PickByPaths<T, S> : Record<string, unknown>;
 
 /** =========================================================================================
- *  FLUENT, STRICTLY-TYPED RESOLVER
+ *  FLUENT, STRICTLY-TYPED RESOLVER (implements CommonResolverApi)
  * =======================================================================================*/
 type Shape = 'plain' | 'entity';
 
@@ -85,6 +86,13 @@ export class PostResolver<
   T extends object,
   S extends readonly PostSelectField[] | undefined = undefined,
   P extends Shape = 'plain'
+> implements CommonResolverApi<
+  PostSelectField,
+  PostFilterInput,
+  S,
+  P,
+  PostPlain<S, T>,
+  T
 > {
   private readonly ctx: MikroOrmCtx<EntityManager>;
   private readonly em: EntityManager;
@@ -131,65 +139,85 @@ export class PostResolver<
     return new PostResolver<T, undefined, 'plain'>(ctx, name, ctor);
   }
 
-  /** ---------- Fluent API (immutable; narrows generics) ---------- */
+  /** ---------- Fluent API (immutable; implements CommonResolverApi while keeping narrowing) ---------- */
 
-  where(filter: PostFilterInput): PostResolver<T, S, P> {
-    return this.clone({ filter });
+  /** Replace filter */
+  where(filter: PostFilterInput): this;
+  where(filter: PostFilterInput): PostResolver<T, S, P>;
+  where(filter: PostFilterInput) {
+    return this.clone({ filter }) as any;
   }
 
-  whereAnd(...nodes: readonly PostFilterNode[]): PostResolver<T, S, P> {
+  /** AND with existing filter */
+  whereAnd(...nodes: readonly PostFilterInput[]): this;
+  whereAnd(...nodes: readonly PostFilterNode[]): PostResolver<T, S, P>;
+  whereAnd(...nodes: readonly PostFilterNode[]) {
     const next = this.state.filter
       ? ({ and: [this.state.filter, ...nodes] } as PostFilterInput)
       : (nodes.length === 1 ? nodes[0]! : ({ and: nodes } as PostFilterInput));
-    return this.clone({ filter: next });
+    return this.clone({ filter: next }) as any;
   }
 
-  whereOr(...nodes: readonly PostFilterNode[]): PostResolver<T, S, P> {
+  /** OR with existing filter */
+  whereOr(...nodes: readonly PostFilterInput[]): this;
+  whereOr(...nodes: readonly PostFilterNode[]): PostResolver<T, S, P>;
+  whereOr(...nodes: readonly PostFilterNode[]) {
     const next = this.state.filter
       ? ({ or: [this.state.filter, ...nodes] } as PostFilterInput)
       : (nodes.length === 1 ? nodes[0]! : ({ or: nodes } as PostFilterInput));
-    return this.clone({ filter: next });
+    return this.clone({ filter: next }) as any;
   }
 
-  withCustomOps(registry: CustomOpRegistry): PostResolver<T, S, P> {
-    return this.clone({ custom: registry });
+  /** Custom operators registry */
+  withCustomOps(registry: CustomOpRegistry): this;
+  withCustomOps(registry: CustomOpRegistry): PostResolver<T, S, P>;
+  withCustomOps(registry: CustomOpRegistry) {
+    return this.clone({ custom: registry }) as any;
   }
 
-  select<SS extends readonly PostSelectField[]>(
-    ...fields: SS
-  ): PostResolver<T, SS, P> {
-    return this.clone<SS, P>({ select: fields as SS });
+  /** Selection (typed narrowing + interface-compatible 'this' signature) */
+  select<SS extends readonly PostSelectField[]>(...fields: SS): this;
+  select<SS extends readonly PostSelectField[]>(...fields: SS): PostResolver<T, SS, P>;
+  select(...fields: readonly PostSelectField[]) {
+    return this.clone({ select: fields as any }) as any;
   }
 
-  selectAll(): PostResolver<T, typeof Post_SELECTABLE, P> {
-    return this.clone<typeof Post_SELECTABLE, P>({ select: Post_SELECTABLE });
+  selectAll(): this;
+  selectAll(): PostResolver<T, typeof Post_SELECTABLE, P>;
+  selectAll() {
+    return this.clone({ select: Post_SELECTABLE }) as any;
   }
 
-  orderBy(field: PostSelectField, direction: 'asc' | 'desc' = 'asc'): PostResolver<T, S, P> {
+  /** Sorting / pagination */
+  orderBy(field: PostSelectField, direction: 'asc' | 'desc' = 'asc'): this {
     const s: SortSpec = [...(this.state.sort ?? []), { field, direction }];
-    return this.clone({ sort: s });
+    return this.clone({ sort: s }) as this;
+  }
+  sort(spec: SortSpec): this { return this.clone({ sort: spec }) as this; }
+
+  limit(n: number): this { return this.clone({ limit: n }) as this; }
+  offset(n: number): this { return this.clone({ offset: n }) as this; }
+  paginate(p: { limit?: number; offset?: number }): this {
+    return this.clone({
+      ...(p.limit  !== undefined ? { limit:  p.limit  } : {}),
+      ...(p.offset !== undefined ? { offset: p.offset } : {}),
+    }) as this;
   }
 
-  sort(spec: SortSpec): PostResolver<T, S, P> {
-    return this.clone({ sort: spec });
+  /** Security / limits */
+  secureRequireSelectable(): this {
+    return this.clone({ security: { ...(this.state.security ?? {}), requireSelectableForFilter: true } }) as this;
   }
+  limits(l: Partial<FilterLimits>): this { return this.clone({ limits: l }) as this; }
 
-  limit(n: number): PostResolver<T, S, P> { return this.clone({ limit: n }); }
-  offset(n: number): PostResolver<T, S, P> { return this.clone({ offset: n }); }
-  paginate(p: { limit?: number; offset?: number }): PostResolver<T, S, P> {
-    return this.clone({ ...(p.limit !== undefined ? { limit: p.limit } : {}), ...(p.offset !== undefined ? { offset: p.offset } : {}) });
-  }
+  /** Shape toggles — flip type-level shape for execute() */
+  entityShape(): this;
+  entityShape(): PostResolver<T, S, 'entity'>;
+  entityShape() { return this.clone<S, 'entity'>({ shape: 'entity' }) as any; }
 
-  secureRequireSelectable(): PostResolver<T, S, P> {
-    return this.clone({ security: { ...(this.state.security ?? {}), requireSelectableForFilter: true } });
-  }
-
-  limits(l: Partial<FilterLimits>): PostResolver<T, S, P> {
-    return this.clone({ limits: l });
-  }
-
-  entityShape(): PostResolver<T, S, 'entity'> { return this.clone<S, 'entity'>({ shape: 'entity' }); }
-  plainShape():  PostResolver<T, S, 'plain'>  { return this.clone<S, 'plain'>({  shape: 'plain'  }); }
+  plainShape(): this;
+  plainShape(): PostResolver<T, S, 'plain'>;
+  plainShape()  { return this.clone<S, 'plain'>({  shape: 'plain'  }) as any; }
 
   /** ---------- Execute (typed by shape & selections) ---------- */
   async execute(this: PostResolver<T, S, 'entity'>): Promise<T[]>;
@@ -427,7 +455,7 @@ export class PostResolver<
 
   private static emitRelationLeaf(
     tailField: string,
-    fieldType: FieldType,
+    _fieldType: FieldType,
     cond: PostConditionNode,
   ): Expr {
     const name = cond.op.toLowerCase();

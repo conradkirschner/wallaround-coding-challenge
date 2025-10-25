@@ -10,6 +10,7 @@ import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
 import type { UserExpr as Expr } from './UserFilterQuery';
 import type { MikroOrmCtx } from 'src/filtering/runtime/driver';
+import type { CommonResolverApi } from 'src/filtering/runtime/resolver-api';
 
 /** ======================= Compile-time entity-scoped constants ======================= */
 export const User_SELECTABLE = ["address","address.city","address.country","address.postalCode","address.street1","address.street2","age","createdAt","displayName","email","id","isActive","posts","posts.content","posts.createdAt","posts.published","posts.title","role","updatedAt"] as const;
@@ -65,7 +66,7 @@ type UserPlain<S extends readonly UserSelectField[] | undefined, T> =
   S extends readonly UserSelectField[] ? PickByPaths<T, S> : Record<string, unknown>;
 
 /** =========================================================================================
- *  FLUENT, STRICTLY-TYPED RESOLVER
+ *  FLUENT, STRICTLY-TYPED RESOLVER (implements CommonResolverApi)
  * =======================================================================================*/
 type Shape = 'plain' | 'entity';
 
@@ -85,6 +86,13 @@ export class UserResolver<
   T extends object,
   S extends readonly UserSelectField[] | undefined = undefined,
   P extends Shape = 'plain'
+> implements CommonResolverApi<
+  UserSelectField,
+  UserFilterInput,
+  S,
+  P,
+  UserPlain<S, T>,
+  T
 > {
   private readonly ctx: MikroOrmCtx<EntityManager>;
   private readonly em: EntityManager;
@@ -131,65 +139,85 @@ export class UserResolver<
     return new UserResolver<T, undefined, 'plain'>(ctx, name, ctor);
   }
 
-  /** ---------- Fluent API (immutable; narrows generics) ---------- */
+  /** ---------- Fluent API (immutable; implements CommonResolverApi while keeping narrowing) ---------- */
 
-  where(filter: UserFilterInput): UserResolver<T, S, P> {
-    return this.clone({ filter });
+  /** Replace filter */
+  where(filter: UserFilterInput): this;
+  where(filter: UserFilterInput): UserResolver<T, S, P>;
+  where(filter: UserFilterInput) {
+    return this.clone({ filter }) as any;
   }
 
-  whereAnd(...nodes: readonly UserFilterNode[]): UserResolver<T, S, P> {
+  /** AND with existing filter */
+  whereAnd(...nodes: readonly UserFilterInput[]): this;
+  whereAnd(...nodes: readonly UserFilterNode[]): UserResolver<T, S, P>;
+  whereAnd(...nodes: readonly UserFilterNode[]) {
     const next = this.state.filter
       ? ({ and: [this.state.filter, ...nodes] } as UserFilterInput)
       : (nodes.length === 1 ? nodes[0]! : ({ and: nodes } as UserFilterInput));
-    return this.clone({ filter: next });
+    return this.clone({ filter: next }) as any;
   }
 
-  whereOr(...nodes: readonly UserFilterNode[]): UserResolver<T, S, P> {
+  /** OR with existing filter */
+  whereOr(...nodes: readonly UserFilterInput[]): this;
+  whereOr(...nodes: readonly UserFilterNode[]): UserResolver<T, S, P>;
+  whereOr(...nodes: readonly UserFilterNode[]) {
     const next = this.state.filter
       ? ({ or: [this.state.filter, ...nodes] } as UserFilterInput)
       : (nodes.length === 1 ? nodes[0]! : ({ or: nodes } as UserFilterInput));
-    return this.clone({ filter: next });
+    return this.clone({ filter: next }) as any;
   }
 
-  withCustomOps(registry: CustomOpRegistry): UserResolver<T, S, P> {
-    return this.clone({ custom: registry });
+  /** Custom operators registry */
+  withCustomOps(registry: CustomOpRegistry): this;
+  withCustomOps(registry: CustomOpRegistry): UserResolver<T, S, P>;
+  withCustomOps(registry: CustomOpRegistry) {
+    return this.clone({ custom: registry }) as any;
   }
 
-  select<SS extends readonly UserSelectField[]>(
-    ...fields: SS
-  ): UserResolver<T, SS, P> {
-    return this.clone<SS, P>({ select: fields as SS });
+  /** Selection (typed narrowing + interface-compatible 'this' signature) */
+  select<SS extends readonly UserSelectField[]>(...fields: SS): this;
+  select<SS extends readonly UserSelectField[]>(...fields: SS): UserResolver<T, SS, P>;
+  select(...fields: readonly UserSelectField[]) {
+    return this.clone({ select: fields as any }) as any;
   }
 
-  selectAll(): UserResolver<T, typeof User_SELECTABLE, P> {
-    return this.clone<typeof User_SELECTABLE, P>({ select: User_SELECTABLE });
+  selectAll(): this;
+  selectAll(): UserResolver<T, typeof User_SELECTABLE, P>;
+  selectAll() {
+    return this.clone({ select: User_SELECTABLE }) as any;
   }
 
-  orderBy(field: UserSelectField, direction: 'asc' | 'desc' = 'asc'): UserResolver<T, S, P> {
+  /** Sorting / pagination */
+  orderBy(field: UserSelectField, direction: 'asc' | 'desc' = 'asc'): this {
     const s: SortSpec = [...(this.state.sort ?? []), { field, direction }];
-    return this.clone({ sort: s });
+    return this.clone({ sort: s }) as this;
+  }
+  sort(spec: SortSpec): this { return this.clone({ sort: spec }) as this; }
+
+  limit(n: number): this { return this.clone({ limit: n }) as this; }
+  offset(n: number): this { return this.clone({ offset: n }) as this; }
+  paginate(p: { limit?: number; offset?: number }): this {
+    return this.clone({
+      ...(p.limit  !== undefined ? { limit:  p.limit  } : {}),
+      ...(p.offset !== undefined ? { offset: p.offset } : {}),
+    }) as this;
   }
 
-  sort(spec: SortSpec): UserResolver<T, S, P> {
-    return this.clone({ sort: spec });
+  /** Security / limits */
+  secureRequireSelectable(): this {
+    return this.clone({ security: { ...(this.state.security ?? {}), requireSelectableForFilter: true } }) as this;
   }
+  limits(l: Partial<FilterLimits>): this { return this.clone({ limits: l }) as this; }
 
-  limit(n: number): UserResolver<T, S, P> { return this.clone({ limit: n }); }
-  offset(n: number): UserResolver<T, S, P> { return this.clone({ offset: n }); }
-  paginate(p: { limit?: number; offset?: number }): UserResolver<T, S, P> {
-    return this.clone({ ...(p.limit !== undefined ? { limit: p.limit } : {}), ...(p.offset !== undefined ? { offset: p.offset } : {}) });
-  }
+  /** Shape toggles — flip type-level shape for execute() */
+  entityShape(): this;
+  entityShape(): UserResolver<T, S, 'entity'>;
+  entityShape() { return this.clone<S, 'entity'>({ shape: 'entity' }) as any; }
 
-  secureRequireSelectable(): UserResolver<T, S, P> {
-    return this.clone({ security: { ...(this.state.security ?? {}), requireSelectableForFilter: true } });
-  }
-
-  limits(l: Partial<FilterLimits>): UserResolver<T, S, P> {
-    return this.clone({ limits: l });
-  }
-
-  entityShape(): UserResolver<T, S, 'entity'> { return this.clone<S, 'entity'>({ shape: 'entity' }); }
-  plainShape():  UserResolver<T, S, 'plain'>  { return this.clone<S, 'plain'>({  shape: 'plain'  }); }
+  plainShape(): this;
+  plainShape(): UserResolver<T, S, 'plain'>;
+  plainShape()  { return this.clone<S, 'plain'>({  shape: 'plain'  }) as any; }
 
   /** ---------- Execute (typed by shape & selections) ---------- */
   async execute(this: UserResolver<T, S, 'entity'>): Promise<T[]>;
@@ -427,7 +455,7 @@ export class UserResolver<
 
   private static emitRelationLeaf(
     tailField: string,
-    fieldType: FieldType,
+    _fieldType: FieldType,
     cond: UserConditionNode,
   ): Expr {
     const name = cond.op.toLowerCase();

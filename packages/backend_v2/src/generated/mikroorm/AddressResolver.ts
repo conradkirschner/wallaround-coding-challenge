@@ -10,6 +10,7 @@ import { getSelectableFields } from 'src/filtering/expose';
 import { type FilterLimits } from 'src/filtering/limits';
 import type { AddressExpr as Expr } from './AddressFilterQuery';
 import type { MikroOrmCtx } from 'src/filtering/runtime/driver';
+import type { CommonResolverApi } from 'src/filtering/runtime/resolver-api';
 
 /** ======================= Compile-time entity-scoped constants ======================= */
 export const Address_SELECTABLE = ["city","country","createdAt","id","postalCode","street1","street2","updatedAt"] as const;
@@ -65,7 +66,7 @@ type AddressPlain<S extends readonly AddressSelectField[] | undefined, T> =
   S extends readonly AddressSelectField[] ? PickByPaths<T, S> : Record<string, unknown>;
 
 /** =========================================================================================
- *  FLUENT, STRICTLY-TYPED RESOLVER
+ *  FLUENT, STRICTLY-TYPED RESOLVER (implements CommonResolverApi)
  * =======================================================================================*/
 type Shape = 'plain' | 'entity';
 
@@ -85,6 +86,13 @@ export class AddressResolver<
   T extends object,
   S extends readonly AddressSelectField[] | undefined = undefined,
   P extends Shape = 'plain'
+> implements CommonResolverApi<
+  AddressSelectField,
+  AddressFilterInput,
+  S,
+  P,
+  AddressPlain<S, T>,
+  T
 > {
   private readonly ctx: MikroOrmCtx<EntityManager>;
   private readonly em: EntityManager;
@@ -131,65 +139,85 @@ export class AddressResolver<
     return new AddressResolver<T, undefined, 'plain'>(ctx, name, ctor);
   }
 
-  /** ---------- Fluent API (immutable; narrows generics) ---------- */
+  /** ---------- Fluent API (immutable; implements CommonResolverApi while keeping narrowing) ---------- */
 
-  where(filter: AddressFilterInput): AddressResolver<T, S, P> {
-    return this.clone({ filter });
+  /** Replace filter */
+  where(filter: AddressFilterInput): this;
+  where(filter: AddressFilterInput): AddressResolver<T, S, P>;
+  where(filter: AddressFilterInput) {
+    return this.clone({ filter }) as any;
   }
 
-  whereAnd(...nodes: readonly AddressFilterNode[]): AddressResolver<T, S, P> {
+  /** AND with existing filter */
+  whereAnd(...nodes: readonly AddressFilterInput[]): this;
+  whereAnd(...nodes: readonly AddressFilterNode[]): AddressResolver<T, S, P>;
+  whereAnd(...nodes: readonly AddressFilterNode[]) {
     const next = this.state.filter
       ? ({ and: [this.state.filter, ...nodes] } as AddressFilterInput)
       : (nodes.length === 1 ? nodes[0]! : ({ and: nodes } as AddressFilterInput));
-    return this.clone({ filter: next });
+    return this.clone({ filter: next }) as any;
   }
 
-  whereOr(...nodes: readonly AddressFilterNode[]): AddressResolver<T, S, P> {
+  /** OR with existing filter */
+  whereOr(...nodes: readonly AddressFilterInput[]): this;
+  whereOr(...nodes: readonly AddressFilterNode[]): AddressResolver<T, S, P>;
+  whereOr(...nodes: readonly AddressFilterNode[]) {
     const next = this.state.filter
       ? ({ or: [this.state.filter, ...nodes] } as AddressFilterInput)
       : (nodes.length === 1 ? nodes[0]! : ({ or: nodes } as AddressFilterInput));
-    return this.clone({ filter: next });
+    return this.clone({ filter: next }) as any;
   }
 
-  withCustomOps(registry: CustomOpRegistry): AddressResolver<T, S, P> {
-    return this.clone({ custom: registry });
+  /** Custom operators registry */
+  withCustomOps(registry: CustomOpRegistry): this;
+  withCustomOps(registry: CustomOpRegistry): AddressResolver<T, S, P>;
+  withCustomOps(registry: CustomOpRegistry) {
+    return this.clone({ custom: registry }) as any;
   }
 
-  select<SS extends readonly AddressSelectField[]>(
-    ...fields: SS
-  ): AddressResolver<T, SS, P> {
-    return this.clone<SS, P>({ select: fields as SS });
+  /** Selection (typed narrowing + interface-compatible 'this' signature) */
+  select<SS extends readonly AddressSelectField[]>(...fields: SS): this;
+  select<SS extends readonly AddressSelectField[]>(...fields: SS): AddressResolver<T, SS, P>;
+  select(...fields: readonly AddressSelectField[]) {
+    return this.clone({ select: fields as any }) as any;
   }
 
-  selectAll(): AddressResolver<T, typeof Address_SELECTABLE, P> {
-    return this.clone<typeof Address_SELECTABLE, P>({ select: Address_SELECTABLE });
+  selectAll(): this;
+  selectAll(): AddressResolver<T, typeof Address_SELECTABLE, P>;
+  selectAll() {
+    return this.clone({ select: Address_SELECTABLE }) as any;
   }
 
-  orderBy(field: AddressSelectField, direction: 'asc' | 'desc' = 'asc'): AddressResolver<T, S, P> {
+  /** Sorting / pagination */
+  orderBy(field: AddressSelectField, direction: 'asc' | 'desc' = 'asc'): this {
     const s: SortSpec = [...(this.state.sort ?? []), { field, direction }];
-    return this.clone({ sort: s });
+    return this.clone({ sort: s }) as this;
+  }
+  sort(spec: SortSpec): this { return this.clone({ sort: spec }) as this; }
+
+  limit(n: number): this { return this.clone({ limit: n }) as this; }
+  offset(n: number): this { return this.clone({ offset: n }) as this; }
+  paginate(p: { limit?: number; offset?: number }): this {
+    return this.clone({
+      ...(p.limit  !== undefined ? { limit:  p.limit  } : {}),
+      ...(p.offset !== undefined ? { offset: p.offset } : {}),
+    }) as this;
   }
 
-  sort(spec: SortSpec): AddressResolver<T, S, P> {
-    return this.clone({ sort: spec });
+  /** Security / limits */
+  secureRequireSelectable(): this {
+    return this.clone({ security: { ...(this.state.security ?? {}), requireSelectableForFilter: true } }) as this;
   }
+  limits(l: Partial<FilterLimits>): this { return this.clone({ limits: l }) as this; }
 
-  limit(n: number): AddressResolver<T, S, P> { return this.clone({ limit: n }); }
-  offset(n: number): AddressResolver<T, S, P> { return this.clone({ offset: n }); }
-  paginate(p: { limit?: number; offset?: number }): AddressResolver<T, S, P> {
-    return this.clone({ ...(p.limit !== undefined ? { limit: p.limit } : {}), ...(p.offset !== undefined ? { offset: p.offset } : {}) });
-  }
+  /** Shape toggles — flip type-level shape for execute() */
+  entityShape(): this;
+  entityShape(): AddressResolver<T, S, 'entity'>;
+  entityShape() { return this.clone<S, 'entity'>({ shape: 'entity' }) as any; }
 
-  secureRequireSelectable(): AddressResolver<T, S, P> {
-    return this.clone({ security: { ...(this.state.security ?? {}), requireSelectableForFilter: true } });
-  }
-
-  limits(l: Partial<FilterLimits>): AddressResolver<T, S, P> {
-    return this.clone({ limits: l });
-  }
-
-  entityShape(): AddressResolver<T, S, 'entity'> { return this.clone<S, 'entity'>({ shape: 'entity' }); }
-  plainShape():  AddressResolver<T, S, 'plain'>  { return this.clone<S, 'plain'>({  shape: 'plain'  }); }
+  plainShape(): this;
+  plainShape(): AddressResolver<T, S, 'plain'>;
+  plainShape()  { return this.clone<S, 'plain'>({  shape: 'plain'  }) as any; }
 
   /** ---------- Execute (typed by shape & selections) ---------- */
   async execute(this: AddressResolver<T, S, 'entity'>): Promise<T[]>;
@@ -427,7 +455,7 @@ export class AddressResolver<
 
   private static emitRelationLeaf(
     tailField: string,
-    fieldType: FieldType,
+    _fieldType: FieldType,
     cond: AddressConditionNode,
   ): Expr {
     const name = cond.op.toLowerCase();
